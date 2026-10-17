@@ -71,9 +71,6 @@ jobs:
             sed -i 's/<application /<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <application android:usesCleartextTraffic="true" /' "$MANIFEST"
           fi
           
-          # إجبار التطبيق على تحميل الخريطة عند الفتح (تعديل بسيط في الكود داخل التطبيق)
-          sed -i "s/window.onload = function()/window.onload = function() { setTimeout(function(){ if(map) map.invalidateSize(); }, 1000);/" www/index.html || true
-          
           cordova build android
       
       - name: Upload APK
