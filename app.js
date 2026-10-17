@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "13") { localStorage.clear(); localStorage.setItem("ARTY_VER","13"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "14") { localStorage.clear(); localStorage.setItem("ARTY_VER","14"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -14,7 +14,8 @@ function gMin(z){var m={C:1100000,D:2000000,E:2800000,F:3700000,G:4600000,H:5500
 function dec(s){if(!s)throw 0;var L=s.length,i=0,sb='',tc;while(!/[A-Z]/.test(tc=s.charAt(i))){if(i>=2)throw 0;sb+=tc;i++;}var zn=parseInt(sb,10);if(i===0||i+3>L)throw 0;var zl=s.charAt(i++),hk=s.substring(i,i+=2),st=g10(zn);var e1=gE(hk.charAt(0),st),n1=gN(hk.charAt(1),st),mn=gMin(zl);while(n1<mn)n1+=2000000;var rem=L-i;if(rem%2!==0)throw 0;var sep=rem/2,e=e1+parseFloat(s.substring(i,i+sep)),n=n1+parseFloat(s.substring(i+sep));return{e:e,n:n,zl:zl,zn:zn};}
 return{forward:function(lat,lon){var u=L2U(lat,lon),f=enc(u.e,u.n,u.zn);return{zone:u.zn+u.zl,sq:f.substring(0,2),e:f.substring(2,7),n:f.substring(7,12)};},inverse:function(m){var b=dec(m.toUpperCase().replace(/\s/g,''));return U2L(b.e,b.n,b.zn,b.zl);}};})();
 
-var D2R=Math.PI/180,R2D=180/Math.PI,MILS=6400;
+var D2R=Math.PI/180,R2D=180/Math.PI;
+var MILS=6400; // سيتم تحديثه من الإعدادات
 var $=function(id){return document.getElementById(id);};
 
 function mkCurve(rmin,rmax,eMin,eMax,tMin,tMax,dMax){var pts=[],N=6;for(var i=0;i<=N;i++){var f=i/N,r=rmin+(rmax-rmin)*f,g=Math.pow(f,2.2);pts.push({r:Math.round(r/50)*50,e:+(eMin+(eMax-eMin)*g).toFixed(1),t:+(tMin+(tMax-tMin)*Math.pow(f,1.35)).toFixed(1),d:+(dMax*Math.pow(f,1.6)).toFixed(1)});}return pts;}
@@ -29,17 +30,29 @@ var DW={
 "kat107":{name:"كاتيوشا 107 ملم",max:8500,info:{caliber:"107 ملم",range:"8,500 م",crew:"4",rof:"12/دفعة",weight:"—",notes:"منصة"},charges:[{n:"وحيد",equip:"منصة",pts:mkCurve(1500,8500,60,380,6,28,25)}]},
 "grad":{name:"كراد 40 فوهة 122",max:20000,info:{caliber:"122 ملم",range:"20,000 م",crew:"5",rof:"40/20ث",weight:"—",notes:"BM-21"},charges:[{n:"وحيد",equip:"BM-21",pts:mkCurve(3000,20000,50,320,10,45,40)}]}};
 
-var DB={version:13,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
+var DB={version:14,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
  equipTypes:["M-46", "D-20", "D-30", "هاون", "منصة", "BM-21"],
- fuzeTypes:["انفجاري", "تأخيري", "زمني", "دخاني"]
+ fuzeTypes:["انفجاري", "تأخيري", "زمني", "دخاني"],
+ milSystem: 6400
 };
 var CORR={dirSide:'R',dirUnit:'mil',dirVal:0,rngSide:'A',rngVal:0};
 var CUR_WPN_ADD_BAT=null;
 var IMPORT_ROWS=[];
 
 function save(){try{localStorage.setItem("ARTY_DB",JSON.stringify(DB));}catch(e){}}
-function load(){var s=localStorage.getItem("ARTY_DB");if(s){try{DB=JSON.parse(s);}catch(e){}}
-for(var k in DW){if(!DB.weapons[k])DB.weapons[k]=JSON.parse(JSON.stringify(DW[k]));}}
+function load(){
+  var s=localStorage.getItem("ARTY_DB");if(s){try{DB=JSON.parse(s);}catch(e){}}
+  if(!DB.milSystem) DB.milSystem = 6400;
+  MILS = parseInt(DB.milSystem);
+  for(var k in DW){if(!DB.weapons[k])DB.weapons[k]=JSON.parse(JSON.stringify(DW[k]));}
+}
+
+function changeMilSystem(){
+  DB.milSystem = parseInt($("setMilSystem").value);
+  MILS = DB.milSystem;
+  save();
+  alert("✔ تم تغيير النظام إلى " + MILS + " ملّي.\nتأكد من تعديل زوايا الأقواس والجداول.");
+}
 
 function readMGRS(p){var z=$(p+'Zone').value.trim().toUpperCase();var s=$(p+'Sq').value.trim().toUpperCase();var e=$(p+'E').value.trim(),n=$(p+'N').value.trim();if(!z||!s||!e||!n)return null;if(e.length!==5||n.length!==5)return null;try{return MGRS.inverse(z+s+e+n);}catch(err){return null;}}
 function updateHint(p){var ll=readMGRS(p),h=$(p+'Hint');if(!h)return;if(ll)h.textContent='✓ '+ll.lat.toFixed(5)+', '+ll.lon.toFixed(5);else h.textContent='';}
@@ -58,7 +71,10 @@ function tab(id,el){
   if(id==='bat')renderWeaponFormDropdowns();
 }
 
-function boot(){refreshWeaponDropdowns();renderBats();renderObs();renderTargets();renderTable();refreshBatSelect();initMap();refreshMapMarkers();}
+function boot(){
+  $("setMilSystem").value = DB.milSystem;
+  refreshWeaponDropdowns();renderBats();renderObs();renderTargets();renderTable();refreshBatSelect();initMap();refreshMapMarkers();
+}
 function refreshWeaponDropdowns(){
   var wOpts='';for(var k in DB.weapons)wOpts+='<option value="'+k+'">'+DB.weapons[k].name+'</option>';
   $("tblWeapon").innerHTML=wOpts;$("nwType").innerHTML=wOpts;
@@ -71,8 +87,8 @@ function renderWeaponFormDropdowns(){
 }
 
 var map=null;
-var layerGroup=null; // طبقة لعرض البطاريات والراصدين والأهداف
-var activeArc=null; // قوس المدفع النشط
+var layerGroup=null;
+var activeArc=null;
 var lineFire=null, lineCorr=null, lineLong=null, lineSquare=null;
 var targetLatLon=null, tMarker=null;
 
@@ -94,7 +110,6 @@ function initMap(){
   }catch(e){}
 }
 
-// دالة لحساب نقطة بناءً على مسافة وزاوية
 function destinationPoint(lat, lon, bearingDeg, distance) {
   var R = 6371000;
   var brng = bearingDeg * Math.PI / 180;
@@ -106,48 +121,40 @@ function destinationPoint(lat, lon, bearingDeg, distance) {
   return [(lat2 * 180 / Math.PI), (lon2 * 180 / Math.PI)];
 }
 
-// دالة لتحديث ورسم كل العناصر على الخريطة
 function refreshMapMarkers(){
   if(!map || !layerGroup) return;
   layerGroup.clearLayers();
   
-  // 1. رسم البطاريات
   DB.batteries.forEach(function(b){
     var icon = L.divIcon({className:'', html:'<div style="font-size:24px; text-shadow: 0 0 5px #000;">🏛️</div>', iconSize:[24,24], iconAnchor:[12,12]});
     L.marker([b.lat, b.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+b.name+'</b><br>بطارية');
   });
 
-  // 2. رسم الراصدين
   DB.observers.forEach(function(o){
     var icon = L.divIcon({className:'', html:'<div style="font-size:24px; text-shadow: 0 0 5px #000;">👁️</div>', iconSize:[24,24], iconAnchor:[12,12]});
     L.marker([o.lat, o.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+o.name+'</b><br>راصد');
   });
 
-  // 3. رسم الأهداف المحفوظة
   DB.targets.forEach(function(t){
     var icon = L.divIcon({className:'', html:'<div style="font-size:24px; text-shadow: 0 0 5px #000;">🎯</div>', iconSize:[24,24], iconAnchor:[12,12]});
     L.marker([t.lat, t.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+t.name+'</b><br>هدف');
   });
 
-  // 4. رسم قوس المدفع الحالي
   if(activeArc) map.removeLayer(activeArc);
   var w = getCurrentWeapon();
   if(w){
-    var centerAzDeg = w.centerAz * (360/6400); // تحويل من ميل إلى درجة
-    var leftLimitDeg = (w.centerAz - w.limitL) * (360/6400);
-    var rightLimitDeg = (w.centerAz + w.limitR) * (360/6400);
+    var centerAzDeg = w.centerAz * (360/MILS); 
+    var leftLimitDeg = (w.centerAz - w.limitL) * (360/MILS);
+    var rightLimitDeg = (w.centerAz + w.limitR) * (360/MILS);
     var maxRange = w.maxRange || 15000;
 
-    var arcPoints = [[w.lat, w.lon]]; // نقطة المدفع
-    // رسم خط الحد الأيسر
+    var arcPoints = [[w.lat, w.lon]];
     arcPoints.push(destinationPoint(w.lat, w.lon, leftLimitDeg, maxRange));
-    // رسم القوس
     var steps = 15;
     for(var i=1; i<=steps; i++){
       var az = leftLimitDeg + (rightLimitDeg - leftLimitDeg) * (i/steps);
       arcPoints.push(destinationPoint(w.lat, w.lon, az, maxRange));
     }
-    // رسم خط الحد الأيمن (يعود لنقطة المدفع)
     arcPoints.push([w.lat, w.lon]);
 
     activeArc = L.polygon(arcPoints, {color: 'rgba(76, 175, 80, 0.5)', weight: 2, fillColor: '#4caf50', fillOpacity: 0.15}).addTo(map);
