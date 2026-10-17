@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "14") { localStorage.clear(); localStorage.setItem("ARTY_VER","14"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "15") { localStorage.clear(); localStorage.setItem("ARTY_VER","15"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -30,7 +30,7 @@ var DW={
 "kat107":{name:"كاتيوشا 107 ملم",max:8500,info:{caliber:"107 ملم",range:"8,500 م",crew:"4",rof:"12/دفعة",weight:"—",notes:"منصة"},charges:[{n:"وحيد",equip:"منصة",pts:mkCurve(1500,8500,60,380,6,28,25)}]},
 "grad":{name:"كراد 40 فوهة 122",max:20000,info:{caliber:"122 ملم",range:"20,000 م",crew:"5",rof:"40/20ث",weight:"—",notes:"BM-21"},charges:[{n:"وحيد",equip:"BM-21",pts:mkCurve(3000,20000,50,320,10,45,40)}]}};
 
-var DB={version:14,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
+var DB={version:15,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
  equipTypes:["M-46", "D-20", "D-30", "هاون", "منصة", "BM-21"],
  fuzeTypes:["انفجاري", "تأخيري", "زمني", "دخاني"],
  milSystem: 6400
@@ -88,7 +88,7 @@ function renderWeaponFormDropdowns(){
 
 var map=null;
 var layerGroup=null;
-var activeArc=null;
+var arcLayers=[];
 var lineFire=null, lineCorr=null, lineLong=null, lineSquare=null;
 var targetLatLon=null, tMarker=null;
 
@@ -121,6 +121,24 @@ function destinationPoint(lat, lon, bearingDeg, distance) {
   return [(lat2 * 180 / Math.PI), (lon2 * 180 / Math.PI)];
 }
 
+function fireFromMapTarget(id){
+  var t = DB.targets.find(function(x){return x.id == id;});
+  if(!t) return;
+  
+  $('tE').value = t.e;
+  $('tN').value = t.n;
+  $('tZone').value = t.zone;
+  $('tSq').value = t.sq;
+  $('tAlt').value = t.alt;
+  
+  tab('fire', document.querySelectorAll(".tabs button")[0]);
+  
+  setTimeout(function() {
+    findBestWeapon();
+    calcFire();
+  }, 300);
+}
+
 function refreshMapMarkers(){
   if(!map || !layerGroup) return;
   layerGroup.clearLayers();
@@ -137,27 +155,35 @@ function refreshMapMarkers(){
 
   DB.targets.forEach(function(t){
     var icon = L.divIcon({className:'', html:'<div style="font-size:24px; text-shadow: 0 0 5px #000;">🎯</div>', iconSize:[24,24], iconAnchor:[12,12]});
-    L.marker([t.lat, t.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+t.name+'</b><br>هدف');
+    var popupContent = '<b>'+t.name+'</b><br>هدف محفوظ<br><button class="btn blue sm" style="margin-top:5px;padding:5px;font-size:12px;" onclick="fireFromMapTarget('+t.id+')">🔥 رمي مباشر</button>';
+    L.marker([t.lat, t.lon], {icon:icon}).addTo(layerGroup).bindPopup(popupContent);
   });
 
-  if(activeArc) map.removeLayer(activeArc);
-  var w = getCurrentWeapon();
-  if(w){
-    var centerAzDeg = w.centerAz * (360/MILS); 
-    var leftLimitDeg = (w.centerAz - w.limitL) * (360/MILS);
-    var rightLimitDeg = (w.centerAz + w.limitR) * (360/MILS);
-    var maxRange = w.maxRange || 15000;
+  // مسح الأقواس القديمة
+  arcLayers.forEach(function(l){ map.removeLayer(l); });
+  arcLayers = [];
+  
+  // رسم أقواس لجميع الأسلحة في البطارية الحالية
+  var b = getCurrentBat();
+  if(b && b.weapons){
+    b.weapons.forEach(function(w){
+      var centerAzDeg = w.centerAz * (360/MILS); 
+      var leftLimitDeg = (w.centerAz - w.limitL) * (360/MILS);
+      var rightLimitDeg = (w.centerAz + w.limitR) * (360/MILS);
+      var maxRange = w.maxRange || 15000;
 
-    var arcPoints = [[w.lat, w.lon]];
-    arcPoints.push(destinationPoint(w.lat, w.lon, leftLimitDeg, maxRange));
-    var steps = 15;
-    for(var i=1; i<=steps; i++){
-      var az = leftLimitDeg + (rightLimitDeg - leftLimitDeg) * (i/steps);
-      arcPoints.push(destinationPoint(w.lat, w.lon, az, maxRange));
-    }
-    arcPoints.push([w.lat, w.lon]);
+      var arcPoints = [[w.lat, w.lon]];
+      arcPoints.push(destinationPoint(w.lat, w.lon, leftLimitDeg, maxRange));
+      var steps = 15;
+      for(var i=1; i<=steps; i++){
+        var az = leftLimitDeg + (rightLimitDeg - leftLimitDeg) * (i/steps);
+        arcPoints.push(destinationPoint(w.lat, w.lon, az, maxRange));
+      }
+      arcPoints.push([w.lat, w.lon]);
 
-    activeArc = L.polygon(arcPoints, {color: 'rgba(76, 175, 80, 0.5)', weight: 2, fillColor: '#4caf50', fillOpacity: 0.15}).addTo(map);
+      var arc = L.polygon(arcPoints, {color: 'rgba(76, 175, 80, 0.6)', weight: 1, fillColor: '#4caf50', fillOpacity: 0.05}).addTo(map);
+      arcLayers.push(arc);
+    });
   }
 }
 
