@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "12") { localStorage.clear(); localStorage.setItem("ARTY_VER","12"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "13") { localStorage.clear(); localStorage.setItem("ARTY_VER","13"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -29,7 +29,7 @@ var DW={
 "kat107":{name:"كاتيوشا 107 ملم",max:8500,info:{caliber:"107 ملم",range:"8,500 م",crew:"4",rof:"12/دفعة",weight:"—",notes:"منصة"},charges:[{n:"وحيد",equip:"منصة",pts:mkCurve(1500,8500,60,380,6,28,25)}]},
 "grad":{name:"كراد 40 فوهة 122",max:20000,info:{caliber:"122 ملم",range:"20,000 م",crew:"5",rof:"40/20ث",weight:"—",notes:"BM-21"},charges:[{n:"وحيد",equip:"BM-21",pts:mkCurve(3000,20000,50,320,10,45,40)}]}};
 
-var DB={version:12,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
+var DB={version:13,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
  equipTypes:["M-46", "D-20", "D-30", "هاون", "منصة", "BM-21"],
  fuzeTypes:["انفجاري", "تأخيري", "زمني", "دخاني"]
 };
@@ -54,11 +54,11 @@ function changePin(){var v=$("newPin").value.trim();if(v.length<4){alert("4 أر
 function tab(id,el){
   var pgs=document.querySelectorAll(".pg");for(var i=0;i<pgs.length;i++)pgs[i].classList.remove("on");$("pg-"+id).classList.add("on");
   var btns=document.querySelectorAll(".tabs button");for(var j=0;j<btns.length;j++)btns[j].classList.remove("on");el.classList.add("on");
-  if(id==='map')setTimeout(function(){ if(map) { map.invalidateSize(); } }, 400);
+  if(id==='map'){ setTimeout(function(){ if(map) { map.invalidateSize(); refreshMapMarkers(); } }, 400); }
   if(id==='bat')renderWeaponFormDropdowns();
 }
 
-function boot(){refreshWeaponDropdowns();renderBats();renderObs();renderTargets();renderTable();refreshBatSelect();initMap();}
+function boot(){refreshWeaponDropdowns();renderBats();renderObs();renderTargets();renderTable();refreshBatSelect();initMap();refreshMapMarkers();}
 function refreshWeaponDropdowns(){
   var wOpts='';for(var k in DB.weapons)wOpts+='<option value="'+k+'">'+DB.weapons[k].name+'</option>';
   $("tblWeapon").innerHTML=wOpts;$("nwType").innerHTML=wOpts;
@@ -70,9 +70,11 @@ function renderWeaponFormDropdowns(){
   $("nwEquip").innerHTML=eqOpts; $("nwFuze").innerHTML=fzOpts;
 }
 
-var map=null, bMarker=null, tMarker=null;
+var map=null;
+var layerGroup=null; // طبقة لعرض البطاريات والراصدين والأهداف
+var activeArc=null; // قوس المدفع النشط
 var lineFire=null, lineCorr=null, lineLong=null, lineSquare=null;
-var targetLatLon=null;
+var targetLatLon=null, tMarker=null;
 
 function initMap(){
   if(map)return;
@@ -80,14 +82,78 @@ function initMap(){
     map=L.map('map1',{zoomControl:true}).setView([33.315,44.366],8);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom: 19, attribution: 'Esri'}).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, opacity: 0.4}).addTo(map);
+    
+    layerGroup = L.layerGroup().addTo(map);
+
     map.on('click',function(e){
       if(tMarker) map.removeLayer(tMarker);
-      tMarker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup('الهدف');
+      tMarker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup('الهدف الحالي');
       setTgtFromMap(e.latlng.lat, e.latlng.lng);
       tMarker.on('dragend',function(ev){var p=ev.target.getLatLng();setTgtFromMap(p.lat,p.lng);});
     });
   }catch(e){}
 }
+
+// دالة لحساب نقطة بناءً على مسافة وزاوية
+function destinationPoint(lat, lon, bearingDeg, distance) {
+  var R = 6371000;
+  var brng = bearingDeg * Math.PI / 180;
+  var lat1 = lat * Math.PI / 180;
+  var lon1 = lon * Math.PI / 180;
+  var d = distance / R;
+  var lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(brng));
+  var lon2 = lon1 + Math.atan2(Math.sin(brng)*Math.sin(d)*Math.cos(lat1), Math.cos(d)-Math.sin(lat1)*Math.sin(lat2));
+  return [(lat2 * 180 / Math.PI), (lon2 * 180 / Math.PI)];
+}
+
+// دالة لتحديث ورسم كل العناصر على الخريطة
+function refreshMapMarkers(){
+  if(!map || !layerGroup) return;
+  layerGroup.clearLayers();
+  
+  // 1. رسم البطاريات
+  DB.batteries.forEach(function(b){
+    var icon = L.divIcon({className:'', html:'<div style="font-size:24px; text-shadow: 0 0 5px #000;">🏛️</div>', iconSize:[24,24], iconAnchor:[12,12]});
+    L.marker([b.lat, b.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+b.name+'</b><br>بطارية');
+  });
+
+  // 2. رسم الراصدين
+  DB.observers.forEach(function(o){
+    var icon = L.divIcon({className:'', html:'<div style="font-size:24px; text-shadow: 0 0 5px #000;">👁️</div>', iconSize:[24,24], iconAnchor:[12,12]});
+    L.marker([o.lat, o.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+o.name+'</b><br>راصد');
+  });
+
+  // 3. رسم الأهداف المحفوظة
+  DB.targets.forEach(function(t){
+    var icon = L.divIcon({className:'', html:'<div style="font-size:24px; text-shadow: 0 0 5px #000;">🎯</div>', iconSize:[24,24], iconAnchor:[12,12]});
+    L.marker([t.lat, t.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+t.name+'</b><br>هدف');
+  });
+
+  // 4. رسم قوس المدفع الحالي
+  if(activeArc) map.removeLayer(activeArc);
+  var w = getCurrentWeapon();
+  if(w){
+    var centerAzDeg = w.centerAz * (360/6400); // تحويل من ميل إلى درجة
+    var leftLimitDeg = (w.centerAz - w.limitL) * (360/6400);
+    var rightLimitDeg = (w.centerAz + w.limitR) * (360/6400);
+    var maxRange = w.maxRange || 15000;
+
+    var arcPoints = [[w.lat, w.lon]]; // نقطة المدفع
+    // رسم خط الحد الأيسر
+    arcPoints.push(destinationPoint(w.lat, w.lon, leftLimitDeg, maxRange));
+    // رسم القوس
+    var steps = 15;
+    for(var i=1; i<=steps; i++){
+      var az = leftLimitDeg + (rightLimitDeg - leftLimitDeg) * (i/steps);
+      arcPoints.push(destinationPoint(w.lat, w.lon, az, maxRange));
+    }
+    // رسم خط الحد الأيمن (يعود لنقطة المدفع)
+    arcPoints.push([w.lat, w.lon]);
+
+    activeArc = L.polygon(arcPoints, {color: 'rgba(76, 175, 80, 0.5)', weight: 2, fillColor: '#4caf50', fillOpacity: 0.15}).addTo(map);
+  }
+}
+
 function setTgtFromMap(lat,lon){
   targetLatLon = {lat:lat, lng:lon};
   fillMGRS('t',lat,lon);
@@ -133,11 +199,11 @@ function addBat(){
     wind:parseFloat($("nbWind").value)||0, windDir:parseFloat($("nbWindDir").value)||0, temp:parseFloat($("nbTemp").value)||25, humid:parseFloat($("nbHumid").value)||50,
     weapons:[]
   });
-  save();renderBats();refreshBatSelect();
+  save();renderBats();refreshBatSelect();refreshMapMarkers();
   ["nbName","nbE","nbN","nbZone","nbSq"].forEach(function(i){$(i).value="";});
   $("nbHint").textContent="";
 }
-function delBat(id){if(!confirm("حذف البطارية؟"))return;DB.batteries=DB.batteries.filter(function(b){return b.id!==id;});save();renderBats();refreshBatSelect();}
+function delBat(id){if(!confirm("حذف البطارية؟"))return;DB.batteries=DB.batteries.filter(function(b){return b.id!==id;});save();renderBats();refreshBatSelect();refreshMapMarkers();}
 
 function showWeaponForm(batId){
   CUR_WPN_ADD_BAT=batId;var b=null;for(var i=0;i<DB.batteries.length;i++)if(DB.batteries[i].id==batId)b=DB.batteries[i];if(!b)return;
@@ -165,11 +231,11 @@ function addWeapon(){
     centerAz:parseFloat($("nwCenterAz").value)||0, limitR:parseFloat($("nwLimR").value)||800, limitL:parseFloat($("nwLimL").value)||800,
     equip:$("nwEquip").value, fuze:$("nwFuze").value
   });
-  save();renderBats();refreshBatSelect();hideWeaponForm();
+  save();renderBats();refreshBatSelect();hideWeaponForm();refreshMapMarkers();
   ["nwName","nwE","nwN","nwZone","nwSq","nwAlt","nwCenterAz","nwLimR","nwLimL"].forEach(function(i){$(i).value="";});
   alert("✔ تم إضافة السلاح");
 }
-function delWeapon(batId,wpnId){if(!confirm("حذف هذا السلاح؟"))return;for(var i=0;i<DB.batteries.length;i++){if(DB.batteries[i].id==batId){DB.batteries[i].weapons=DB.batteries[i].weapons.filter(function(w){return w.id!==wpnId;});break;}}save();renderBats();refreshBatSelect();}
+function delWeapon(batId,wpnId){if(!confirm("حذف هذا السلاح؟"))return;for(var i=0;i<DB.batteries.length;i++){if(DB.batteries[i].id==batId){DB.batteries[i].weapons=DB.batteries[i].weapons.filter(function(w){return w.id!==wpnId;});break;}}save();renderBats();refreshBatSelect();refreshMapMarkers();}
 
 function renderBats(){
   var el=$("batList");
@@ -197,7 +263,7 @@ function refreshBatSelect(){var s=$("selBat");s.innerHTML='';DB.batteries.forEac
 function onBatChange(){
   var b=getCurrentBat();
   var ws=$("selWeapon");
-  ws.innerHTML = ""; // تفريغ القائمة بشكل كامل
+  ws.innerHTML = "";
   
   if(b){
     $("envInfo").innerHTML='ريح: '+b.wind+' | حرارة: '+b.temp;
@@ -221,6 +287,7 @@ function onBatChange(){
     $("envInfo").innerHTML='';
   }
   $("candidatesList").innerHTML='';
+  refreshMapMarkers();
 }
 
 function onWeaponChange(){
@@ -232,6 +299,7 @@ function onWeaponChange(){
   var s=$("selCharge"); var h='<option value="auto">تلقائي</option>';
   if(wt) wt.charges.forEach(function(c,i){ if(c.equip === w.equip) h+='<option value="'+i+'">حشوة '+c.n+'</option>'; });
   s.innerHTML=h;
+  refreshMapMarkers();
 }
 function onTargetChange(){updateHint('t');$("candidatesList").innerHTML='';}
 
@@ -327,32 +395,10 @@ function saveTable(){var wk=$("tblWeapon").value,w=DB.weapons[wk],ci=+$("tblChar
 function addRow(){var wk=$("tblWeapon").value,ci=+$("tblCharge").value;DB.weapons[wk].charges[ci].pts.push({r:0,e:0,t:0,d:0});save();renderTable();}
 function delRow(i){var wk=$("tblWeapon").value,ci=+$("tblCharge").value;DB.weapons[wk].charges[ci].pts.splice(i,1);save();renderTable();}
 
-// ميزة OCR واللصق
-function openOCR(){
-  $("importPanel").style.display="block";
-  $("importTitle").textContent="📷 استيراد من صورة";
-  $("importPhotoBox").style.display="block";
-  $("importPasteBox").style.display="none";
-  $("importPreview").style.display="none";
-  $("ocrProgress").textContent="";
-  $("importPanel").scrollIntoView();
-}
-function openPaste(){
-  $("importPanel").style.display="block";
-  $("importTitle").textContent="📋 استيراد من نص";
-  $("importPhotoBox").style.display="none";
-  $("importPasteBox").style.display="block";
-  $("importPreview").style.display="none";
-  $("pasteArea").value="";
-  $("importPanel").scrollIntoView();
-}
+function openOCR(){$("importPanel").style.display="block";$("importTitle").textContent="📷 استيراد من صورة";$("importPhotoBox").style.display="block";$("importPasteBox").style.display="none";$("importPreview").style.display="none";$("ocrProgress").textContent="";$("importPanel").scrollIntoView();}
+function openPaste(){$("importPanel").style.display="block";$("importTitle").textContent="📋 استيراد من نص";$("importPhotoBox").style.display="none";$("importPasteBox").style.display="block";$("importPreview").style.display="none";$("pasteArea").value="";$("importPanel").scrollIntoView();}
 function closeImport(){$("importPanel").style.display="none";IMPORT_ROWS=[];}
-function runOCR(){
-  var f=$("ocrFile").files[0];if(!f){alert("اختر صورة أولاً");return;}
-  if(typeof Tesseract==="undefined"){alert("مكتبة OCR لم تُحمّل — تأكد من الإنترنت");return;}
-  $("ocrProgress").textContent="⏳ جاري التحليل...";
-  Tesseract.recognize(f,"eng",{logger:function(m){if(m.status==="recognizing text"){$("ocrProgress").textContent="📖 "+Math.round(m.progress*100)+"%";}}}).then(function(res){$("ocrProgress").textContent="✅ تم";parseTableText(res.data.text);}).catch(function(err){$("ocrProgress").textContent="✗ فشل: "+err.message;});
-}
+function runOCR(){var f=$("ocrFile").files[0];if(!f){alert("اختر صورة أولاً");return;}if(typeof Tesseract==="undefined"){alert("مكتبة OCR لم تُحمّل — تأكد من الإنترنت");return;}$("ocrProgress").textContent="⏳ جاري التحليل...";Tesseract.recognize(f,"eng",{logger:function(m){if(m.status==="recognizing text"){$("ocrProgress").textContent="📖 "+Math.round(m.progress*100)+"%";}}}).then(function(res){$("ocrProgress").textContent="✅ تم";parseTableText(res.data.text);}).catch(function(err){$("ocrProgress").textContent="✗ فشل: "+err.message;});}
 function parsePasteText(){var txt=$("pasteArea").value;if(!txt.trim()){alert("الصق نصاً أولاً");return;}parseTableText(txt);}
 function parseTableText(text){
   var lines=text.split(/\r?\n/);var rows=[];
@@ -383,12 +429,12 @@ function applyImport(){
   w.charges[ci].pts=IMPORT_ROWS.slice();w.charges[ci].pts.sort(function(a,b){return a.r-b.r;});save();renderTable();closeImport();alert("✔ تم التطبيق");
 }
 
-function addObs(){var name=$("noName").value.trim()||("راصد "+(DB.observers.length+1));var ll=readMGRS('no');if(!ll){alert("أدخل MGRS");return;}DB.observers.push({id:Date.now(),name:name,lat:ll.lat,lon:ll.lon,alt:parseFloat($("noAlt").value)||0});save();renderObs();["noName","noE","noN","noZone","noSq"].forEach(function(i){$(i).value="";});$("noHint").textContent="";}
-function delObs(id){if(!confirm("حذف؟"))return;DB.observers=DB.observers.filter(function(o){return o.id!==id;});save();renderObs();}
+function addObs(){var name=$("noName").value.trim()||("راصد "+(DB.observers.length+1));var ll=readMGRS('no');if(!ll){alert("أدخل MGRS");return;}DB.observers.push({id:Date.now(),name:name,lat:ll.lat,lon:ll.lon,alt:parseFloat($("noAlt").value)||0});save();renderObs();refreshMapMarkers();["noName","noE","noN","noZone","noSq"].forEach(function(i){$(i).value="";});$("noHint").textContent="";}
+function delObs(id){if(!confirm("حذف؟"))return;DB.observers=DB.observers.filter(function(o){return o.id!==id;});save();renderObs();refreshMapMarkers();}
 function renderObs(){var el=$("obsList");if(!DB.observers.length){el.innerHTML='<div style="color:var(--dim);font-size:11px">لا يوجد</div>';return;}var h='';DB.observers.forEach(function(o){h+='<div class="item"><b>'+o.name+'</b><button class="btn red sm" onclick="delObs('+o.id+')">حذف</button></div>';});el.innerHTML=h;}
 
-function saveTarget(){var ll=readMGRS('t');if(!ll){alert("أدخل MGRS");return;}var name=$("tName").value.trim()||("هدف "+(DB.targets.length+1));var m=MGRS.forward(ll.lat,ll.lon);DB.targets.push({id:Date.now(),name:name,zone:m.zone,sq:m.sq,e:m.e,n:m.n,lat:ll.lat,lon:ll.lon,alt:parseFloat($("tAlt").value)||0});save();renderTargets();$("tName").value="";alert("✔ تم");}
-function delTarget(id){if(!confirm("حذف؟"))return;DB.targets=DB.targets.filter(function(t){return t.id!==id;});save();renderTargets();}
+function saveTarget(){var ll=readMGRS('t');if(!ll){alert("أدخل MGRS");return;}var name=$("tName").value.trim()||("هدف "+(DB.targets.length+1));var m=MGRS.forward(ll.lat,ll.lon);DB.targets.push({id:Date.now(),name:name,zone:m.zone,sq:m.sq,e:m.e,n:m.n,lat:ll.lat,lon:ll.lon,alt:parseFloat($("tAlt").value)||0});save();renderTargets();refreshMapMarkers();$("tName").value="";alert("✔ تم");}
+function delTarget(id){if(!confirm("حذف؟"))return;DB.targets=DB.targets.filter(function(t){return t.id!==id;});save();renderTargets();refreshMapMarkers();}
 function renderTargets(){var el=$("tgtList");if(!DB.targets.length){el.innerHTML='<div style="color:var(--dim);font-size:11px">لا توجد</div>';return;}var h='';DB.targets.forEach(function(t){h+='<div class="item"><b>'+t.name+'</b><button class="btn red sm" onclick="delTarget('+t.id+')">🗑️</button></div>';});el.innerHTML=h;}
 
 function exportData(){var blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="arty_backup.json";a.click();}
