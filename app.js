@@ -35,6 +35,7 @@ var DB={version:12,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.
 };
 var CORR={dirSide:'R',dirUnit:'mil',dirVal:0,rngSide:'A',rngVal:0};
 var CUR_WPN_ADD_BAT=null;
+var IMPORT_ROWS=[];
 
 function save(){try{localStorage.setItem("ARTY_DB",JSON.stringify(DB));}catch(e){}}
 function load(){var s=localStorage.getItem("ARTY_DB");if(s){try{DB=JSON.parse(s);}catch(e){}}
@@ -289,7 +290,7 @@ function calcFire(){
 
   var dh=parseFloat($("tAlt").value)-w.alt;var site=baseRange>0?(dh/baseRange)*1000:0;
   var windSpeed=parseFloat($("wind").value)||0;
-  var windCorr=windSpeed*0.1; // تبسيط
+  var windCorr=windSpeed*0.1;
   var finalElev=point.e+site+(parseFloat($("elevCorr").value)||0);
   var finalDefl=(baseAzMil+point.d+windCorr+MILS)%MILS;
   
@@ -325,6 +326,62 @@ function renderTable(){
 function saveTable(){var wk=$("tblWeapon").value,w=DB.weapons[wk],ci=+$("tblCharge").value;var inputs=$("tblTbl").querySelectorAll("input");for(var j=0;j<inputs.length;j++){var inp=inputs[j],i=+inp.getAttribute("data-i"),f=inp.getAttribute("data-f");w.charges[ci].pts[i][f]=parseFloat(inp.value)||0;}w.charges[ci].pts.sort(function(a,b){return a.r-b.r;});save();renderTable();alert("✔ تم");}
 function addRow(){var wk=$("tblWeapon").value,ci=+$("tblCharge").value;DB.weapons[wk].charges[ci].pts.push({r:0,e:0,t:0,d:0});save();renderTable();}
 function delRow(i){var wk=$("tblWeapon").value,ci=+$("tblCharge").value;DB.weapons[wk].charges[ci].pts.splice(i,1);save();renderTable();}
+
+// ميزة OCR واللصق
+function openOCR(){
+  $("importPanel").style.display="block";
+  $("importTitle").textContent="📷 استيراد من صورة";
+  $("importPhotoBox").style.display="block";
+  $("importPasteBox").style.display="none";
+  $("importPreview").style.display="none";
+  $("ocrProgress").textContent="";
+  $("importPanel").scrollIntoView();
+}
+function openPaste(){
+  $("importPanel").style.display="block";
+  $("importTitle").textContent="📋 استيراد من نص";
+  $("importPhotoBox").style.display="none";
+  $("importPasteBox").style.display="block";
+  $("importPreview").style.display="none";
+  $("pasteArea").value="";
+  $("importPanel").scrollIntoView();
+}
+function closeImport(){$("importPanel").style.display="none";IMPORT_ROWS=[];}
+function runOCR(){
+  var f=$("ocrFile").files[0];if(!f){alert("اختر صورة أولاً");return;}
+  if(typeof Tesseract==="undefined"){alert("مكتبة OCR لم تُحمّل — تأكد من الإنترنت");return;}
+  $("ocrProgress").textContent="⏳ جاري التحليل...";
+  Tesseract.recognize(f,"eng",{logger:function(m){if(m.status==="recognizing text"){$("ocrProgress").textContent="📖 "+Math.round(m.progress*100)+"%";}}}).then(function(res){$("ocrProgress").textContent="✅ تم";parseTableText(res.data.text);}).catch(function(err){$("ocrProgress").textContent="✗ فشل: "+err.message;});
+}
+function parsePasteText(){var txt=$("pasteArea").value;if(!txt.trim()){alert("الصق نصاً أولاً");return;}parseTableText(txt);}
+function parseTableText(text){
+  var lines=text.split(/\r?\n/);var rows=[];
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();if(!line)continue;
+    var clean=line.replace(/[\t|,;]+/g," ");
+    var nums=clean.match(/-?\d+(\.\d+)?/g);
+    if(!nums)continue;if(nums.length<3)continue;
+    var r=parseFloat(nums[0]);var e=parseFloat(nums[1]);var t=parseFloat(nums[2]);var d=nums[3]!==undefined?parseFloat(nums[3]):0;
+    if(r<50||r>100000)continue;if(e<0||e>1600)continue;
+    rows.push({r:r,e:e,t:t,d:d});
+  }
+  if(!rows.length){alert("لم يتم العثور على بيانات صالحة");return;}
+  IMPORT_ROWS=rows;showPreview();
+}
+function showPreview(){
+  var h='<tr><th>#</th><th>المدى</th><th>الزاوية</th><th>الزمن</th><th>الانحراف</th><th></th></tr>';
+  IMPORT_ROWS.forEach(function(r,i){
+    h+='<tr><td>'+(i+1)+'</td><td><input type="number" value="'+r.r+'" onchange="IMPORT_ROWS['+i+'].r=parseFloat(this.value)||0"></td><td><input type="number" step="0.1" value="'+r.e+'" onchange="IMPORT_ROWS['+i+'].e=parseFloat(this.value)||0"></td><td><input type="number" step="0.1" value="'+r.t+'" onchange="IMPORT_ROWS['+i+'].t=parseFloat(this.value)||0"></td><td><input type="number" step="0.1" value="'+r.d+'" onchange="IMPORT_ROWS['+i+'].d=parseFloat(this.value)||0"></td><td><button class="del" onclick="IMPORT_ROWS.splice('+i+',1);showPreview()">✕</button></td></tr>';
+  });
+  $("previewTable").innerHTML=h;$("importPreview").style.display="block";$("importPreview").scrollIntoView();
+}
+function applyImport(){
+  if(!IMPORT_ROWS.length){alert("لا بيانات");return;}
+  var wk=$("tblWeapon").value,w=DB.weapons[wk];var ci=+$("tblCharge").value;
+  if(!w||!w.charges[ci]){alert("اختر سلاحاً وحشوة أولاً");return;}
+  if(!confirm("سيتم استبدال "+w.charges[ci].pts.length+" نقطة بـ "+IMPORT_ROWS.length+" نقطة.\n\nمتابعة؟"))return;
+  w.charges[ci].pts=IMPORT_ROWS.slice();w.charges[ci].pts.sort(function(a,b){return a.r-b.r;});save();renderTable();closeImport();alert("✔ تم التطبيق");
+}
 
 function addObs(){var name=$("noName").value.trim()||("راصد "+(DB.observers.length+1));var ll=readMGRS('no');if(!ll){alert("أدخل MGRS");return;}DB.observers.push({id:Date.now(),name:name,lat:ll.lat,lon:ll.lon,alt:parseFloat($("noAlt").value)||0});save();renderObs();["noName","noE","noN","noZone","noSq"].forEach(function(i){$(i).value="";});$("noHint").textContent="";}
 function delObs(id){if(!confirm("حذف؟"))return;DB.observers=DB.observers.filter(function(o){return o.id!==id;});save();renderObs();}
