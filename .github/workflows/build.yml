@@ -66,11 +66,13 @@ jobs:
           
           cordova platform add android
           
-          # إجبار التطبيق على السماح بالإنترنت
           MANIFEST="platforms/android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i 's/<application /<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <application android:usesCleartextTraffic="true" /' "$MANIFEST"
           fi
+          
+          # إجبار التطبيق على تحميل الخريطة عند الفتح (تعديل بسيط في الكود داخل التطبيق)
+          sed -i "s/window.onload = function()/window.onload = function() { setTimeout(function(){ if(map) map.invalidateSize(); }, 1000);/" www/index.html || true
           
           cordova build android
       
