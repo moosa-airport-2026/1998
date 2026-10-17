@@ -1,0 +1,81 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Install Cordova
+        run: npm install -g cordova
+      
+      - name: Build App
+        run: |
+          cordova create app com.arty.app Nasrallah
+          cp index.html app/www/index.html
+          
+          ICON=$(ls | grep -i "^icon" | head -1)
+          if [ -n "$ICON" ]; then
+            cp "$ICON" app/www/icon.png
+            cp "$ICON" app/icon.png
+          fi
+          
+          cd app
+          rm -f www/css/index.css www/js/index.js
+          
+          cat > config.xml << 'XMLEOF'
+          <?xml version='1.0' encoding='utf-8'?>
+          <widget id="com.arty.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+            <name>نصر الله</name>
+            <content src="index.html" />
+            <preference name="Orientation" value="portrait" />
+            <preference name="BackgroundColor" value="#0f1a12" />
+            <preference name="AndroidWindowSplashScreenBackground" value="#0f1a12" />
+            <preference name="AndroidInsecureFileModeEnabled" value="true" />
+            <preference name="AndroidNetworkAllowed" value="true" />
+            <access origin="*" />
+            <allow-navigation href="*" />
+            <allow-intent href="http://*/*" />
+            <allow-intent href="https://*/*" />
+            <platform name="android">
+              <preference name="android-minSdkVersion" value="22" />
+              <preference name="android-targetSdkVersion" value="34" />
+              <icon density="ldpi" src="icon.png" />
+              <icon density="mdpi" src="icon.png" />
+              <icon density="hdpi" src="icon.png" />
+              <icon density="xhdpi" src="icon.png" />
+              <icon density="xxhdpi" src="icon.png" />
+              <icon density="xxxhdpi" src="icon.png" />
+            </platform>
+          </widget>
+          XMLEOF
+          
+          cordova platform add android
+          
+          # إجبار التطبيق على السماح بالإنترنت
+          MANIFEST="platforms/android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            sed -i 's/<application /<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <application android:usesCleartextTraffic="true" /' "$MANIFEST"
+          fi
+          
+          cordova build android
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: arty-apk
+          path: app/platforms/android/app/build/outputs/apk/debug/*.apk
