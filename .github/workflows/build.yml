@@ -26,7 +26,11 @@ jobs:
       - name: Build App
         run: |
           cordova create app com.arty.app Nasrallah
+          
+          # نسخ الملفات المنفصلة إلى داخل التطبيق
           cp index.html app/www/index.html
+          cp style.css app/www/style.css
+          cp app.js app/www/app.js
           
           ICON=$(ls | grep -i "^icon" | head -1)
           if [ -n "$ICON" ]; then
