@@ -240,6 +240,15 @@
 
 <div class="pg" id="pg-setup">
 <div class="card">
+  <h3>⚙️ نظام قياس الزوايا (مهم جداً)</h3>
+  <label>اختر نظام الزوايا المطابق لمدفعيتك</label>
+  <select id="setMilSystem" onchange="changeMilSystem()">
+    <option value="6400">6400 (غربي / NATO)</option>
+    <option value="6000">6000 (شرقي / روسي)</option>
+  </select>
+  <div style="font-size:10px;color:var(--dim);margin-top:4px">يجب أن يتطابق هذا مع نظام مدفعك وجداول الرمي. عند التغيير، يجب إعادة إدخال زوايا الأقواس.</div>
+</div>
+<div class="card">
 <h3>⚙️ إدارة العتاد</h3>
 <div class="row">
 <input id="newEquipName" placeholder="نوع العتاد">
