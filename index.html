@@ -336,6 +336,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
+// تفريغ الذاكرة القديمة لضمان عمل التطبيق بشكل صحيح
+localStorage.clear();
+
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
 function L2U(lat,lon){var a=6378137,e=0.00669438,k=0.9996,d=Math.PI/180;var la=lat*d,lo=lon*d,zn=Math.floor((lon+180)/6)+1,lo0=((zn-1)*6-180+3)*d;var ep=e/(1-e),N=a/Math.sqrt(1-e*Math.pow(Math.sin(la),2)),T=Math.pow(Math.tan(la),2);var Cc=ep*Math.pow(Math.cos(la),2),Aa=Math.cos(la)*(lo-lo0);var M=a*((1-e/4-3*e*e/64-5*Math.pow(e,3)/256)*la-(3*e/8+3*e*e/32+45*Math.pow(e,3)/1024)*Math.sin(2*la)+(15*e*e/256+45*Math.pow(e,3)/1024)*Math.sin(4*la)-(35*Math.pow(e,3)/3072)*Math.sin(6*la));var E=k*N*(Aa+(1-T+Cc)*Math.pow(Aa,3)/6+(5-18*T+T*T+72*Cc-58*ep)*Math.pow(Aa,5)/120)+500000;var Nn=k*(M+N*Math.tan(la)*(Aa*Aa/2+(5-T+9*Cc+4*Cc*Cc)*Math.pow(Aa,4)/24+(61-58*T+T*T+600*Cc-330*ep)*Math.pow(Aa,6)/720));if(lat<0)Nn+=10000000;return{e:E,n:Nn,zn:zn,zl:LD(lat)};}
@@ -373,23 +376,7 @@ var CUR_WPN_ADD_BAT=null,EDIT_WPN_KEY=null,EDIT_TEMP=null,IMPORT_ROWS=[];
 
 function save(){try{localStorage.setItem("ARTY_DB",JSON.stringify(DB));}catch(e){}}
 function load(){var s=localStorage.getItem("ARTY_DB");if(s){try{DB=JSON.parse(s);}catch(e){}}
-if(!DB.version||DB.version<11){
-  if(DB.batteries){DB.batteries.forEach(function(b){
-    if(b.weapon&&!b.weapons){b.weapons=[{id:Date.now()+Math.random(),type:b.weapon,name:(DW[b.weapon]&&DW[b.weapon].name)||b.weapon,alt:b.alt,minRange:1000,maxRange:(DW[b.weapon]&&DW[b.weapon].max)||15000,centerAz:b.centerAz||0,limitR:b.limitR||800,limitL:b.limitL||800,equip:'M-46',fuze:'انفجاري'}];delete b.weapon;}
-    if(!b.weapons)b.weapons=[];
-    if(b.wind===undefined)b.wind=0; if(b.windDir===undefined)b.windDir=0; if(b.temp===undefined)b.temp=25; if(b.humid===undefined)b.humid=50;
-    b.weapons.forEach(function(w){
-      if(w.lat===undefined)w.lat=b.lat;if(w.lon===undefined)w.lon=b.lon;
-      if(w.centerAz===undefined)w.centerAz=b.centerAz||0;
-      if(w.limitR===undefined)w.limitR=b.limitR||800; if(w.limitL===undefined)w.limitL=b.limitL||800;
-      if(!w.equip)w.equip='M-46'; if(!w.fuze)w.fuze='انفجاري';
-    });
-  });}
-  DB.version=11;
-  if(!DB.equipTypes)DB.equipTypes=["M-46", "D-20", "D-30", "هاون", "منصة", "BM-21"];
-  if(!DB.fuzeTypes)DB.fuzeTypes=["انفجاري", "تأخيري", "زمني", "دخاني"];
-  save();
-}
+// بما أننا مسحنا الذاكرة، لن يتم تحميل أي بيانات قديمة
 for(var k in DW){if(!DB.weapons[k])DB.weapons[k]=JSON.parse(JSON.stringify(DW[k]));if(!DB.weapons[k].info)DB.weapons[k].info=DW[k].info;}}
 
 function readMGRS(p){var z=$(p+'Zone').value.trim().toUpperCase();var s=$(p+'Sq').value.trim().toUpperCase();var e=$(p+'E').value.trim(),n=$(p+'N').value.trim();if(!z||!s||!e||!n)return null;if(e.length!==5||n.length!==5)return null;try{return MGRS.inverse(z+s+e+n);}catch(err){return null;}}
