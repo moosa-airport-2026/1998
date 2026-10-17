@@ -196,6 +196,34 @@
 <button class="btn amber" onclick="saveTable()">💾 حفظ</button>
 <button class="btn sec sm" onclick="addRow()">➕ سطر</button>
 </div>
+
+<div class="card">
+<h3>📷 استيراد جدول تلقائي</h3>
+<button class="btn blue" onclick="openOCR()">📷 صوّر الجدول (OCR)</button>
+<button class="btn amber" onclick="openPaste()" style="margin-top:6px">📋 الصق نص الجدول</button>
+</div>
+
+<div class="card" id="importPanel" style="display:none">
+<h3 id="importTitle">استيراد</h3>
+<div id="importPhotoBox" style="display:none">
+<label>اختر صورة الجدول</label>
+<input type="file" id="ocrFile" accept="image/*" capture="environment">
+<button class="btn blue" onclick="runOCR()">🔍 ابدأ التحليل</button>
+<div id="ocrProgress" style="font-size:11px;color:var(--amber);margin-top:6px"></div>
+</div>
+<div id="importPasteBox" style="display:none">
+<label>الصق نص الجدول (4 أعمدة: مدى، زاوية، زمن، انحراف)</label>
+<textarea id="pasteArea" style="min-height:120px;font-family:monospace;direction:ltr"></textarea>
+<button class="btn amber" onclick="parsePasteText()">🔍 حلّل النص</button>
+</div>
+<div id="importPreview" style="display:none;margin-top:10px">
+<div style="font-size:12px;color:var(--acc2);margin-bottom:6px">معاينة (عدّل ما تحتاج):</div>
+<div style="overflow-x:auto"><table class="tbl" id="previewTable"></table></div>
+<button class="btn" onclick="applyImport()">✅ تطبيق على الجدول</button>
+<button class="btn sec" onclick="closeImport()">✕ إلغاء</button>
+</div>
+</div>
+
 <div class="card">
 <h3>التحكم</h3>
 <button class="btn sec sm" onclick="exportData()">📤 تصدير</button>
