@@ -55,24 +55,27 @@
 <div id="candidatesList" style="margin-top:8px"></div>
 </div>
 
-<!-- التصحيحات الجوية والبالستية المتقدمة -->
-<div class="card"><h3>3️⃣ التصحيحات البالستية والجوية</h3>
-<div id="envInfo" style="font-size:11px;color:var(--amber);margin-bottom:5px"></div>
-<div class="row">
-<div><label>حشوة</label><select id="selCharge"><option value="auto">تلقائي</option></select></div>
-<div><label>فرق السرعة الابتدائية (ΔV م/ث)</label><input id="deltaV" type="number" value="0"></div>
+<div class="card"><h3>3️⃣ الظروف المتغيرة (لكل هدف)</h3>
+<div class="row3">
+<div><label>حرارة (C)</label><input id="cTemp" type="number" value="15"></div>
+<div><label>ضغط (mmHg)</label><input id="cPress" type="number" value="750"></div>
+<div><label>رطوبة (%)</label><input id="cHumid" type="number" value="50"></div>
 </div>
 <div class="row">
-<div><label>تصحيح الحيدان (mil)</label><input id="jumpCorr" type="number" value="0" step="0.1"></div>
-<div><label>تصحيح الزاوية (mil)</label><input id="elevCorr" type="number" value="0" step="0.1"></div>
+<div><label>سرعة الريح (م/ث)</label><input id="cWind" type="number" value="0"></div>
+<div><label>اتجاه الريح (mil)</label><input id="cWindDir" type="number" value="0"></div>
 </div>
 <div class="row">
-<div><label>مقياس الملات (ث)</label><input id="fuzeTime" type="number" value="0" step="0.1"></div>
-<div><label>السدادة الرقابية</label><input id="fuzeNeck" type="number" value="0"></div>
+<div><label>فرق السرعة الابتدائية (ΔV)</label><input id="cDeltaV" type="number" value="0"></div>
+<div><label>تصحيح الحيدان (mil)</label><input id="cJump" type="number" value="0" step="0.1"></div>
 </div>
 <div class="row">
-<div><label>سدادة المركبة</label><input id="fuzeBase" type="number" value="0"></div>
-<div><label>---</label></div>
+<div><label>مقياس الملات (ث) - اختياري</label><input id="cFuzeTime" type="number" value="0" step="0.1"></div>
+<div><label>تصحيح الزاوية (mil)</label><input id="cElevCorr" type="number" value="0" step="0.1"></div>
+</div>
+<div class="row">
+<div><label>السدادة الرقابية</label><input id="cFuzeNeck" type="number" value="0"></div>
+<div><label>سدادة المركبة</label><input id="cFuzeBase" type="number" value="0"></div>
 </div>
 </div>
 
@@ -114,12 +117,20 @@
   <div class="card"><h3>قائمة الأهداف المحفوظة</h3><div id="tgtList"></div></div>
   
   <div class="card">
-    <h3>⛔ بنك الأهداف المحظورة</h3>
+    <h3>⛔ بنك الأهداف المحظورة (دائري)</h3>
     <label>اسم الموقع المحظور</label>
-    <div class="row">
-      <input id="rtName" placeholder="مستشفى / مسجد">
-      <button class="btn red" style="margin:0; padding:0 10px;" onclick="addRestrictedFromList()">➕ إضافة</button>
+    <input id="rtName" placeholder="مستشفى / مسجد">
+    <div class="mgbox">
+      <label>الشرقي</label><input id="rtE" maxlength="5" placeholder="12345">
+      <label>الشمالي</label><input id="rtN" maxlength="5" placeholder="67890">
+      <div class="mgrow">
+        <div><label>Zone</label><input id="rtZone" maxlength="3" placeholder="38S"></div>
+        <div><label>Square</label><input id="rtSq" maxlength="2" placeholder="MB"></div>
+      </div>
     </div>
+    <label>نصف قطر الدائرة المحظورة (متر)</label>
+    <input id="rtRadius" type="number" value="250">
+    <button class="btn red" onclick="addRestrictedFromList()">⛔ إضافة هدف محظور</button>
     <div id="resList" style="margin-top:10px"></div>
   </div>
 </div>
@@ -139,16 +150,7 @@
 </div>
 <div id="nbHint" class="hint"></div>
 </div>
-<div class="row3">
-<div><label>الارتفاع</label><input id="nbAlt" type="number" value="0"></div>
-<div><label>ريح (م/ث)</label><input id="nbWind" type="number" value="0"></div>
-<div><label>اتجاه الريح (mil)</label><input id="nbWindDir" type="number" value="0"></div>
-</div>
-<div class="row3" style="margin-top:5px">
-<div><label>حرارة الهواء (C)</label><input id="nbTemp" type="number" value="15"></div>
-<div><label>الضغط الجوي (mmHg)</label><input id="nbPress" type="number" value="750"></div>
-<div><label>رطوبة (%)</label><input id="nbHumid" type="number" value="50"></div>
-</div>
+<label>الارتفاع (م)</label><input id="nbAlt" type="number" value="0">
 
 <h3 style="margin-top:15px; border-top:1px dashed var(--brd); padding-top:10px;">👁️ بيانات الراصد</h3>
 <label>اسم الراصد</label><input id="nbObsName" placeholder="راصد 1">
@@ -227,7 +229,11 @@
 <h3>جداول الرمي (البيانات القياسية)</h3>
 <label>السلاح</label><select id="tblWeapon" onchange="onTblWeaponChange()"></select>
 <label>العتاد</label><select id="tblEquip" onchange="renderTable()"></select>
-<label>الحشوة</label><select id="tblCharge" onchange="renderTable()"></select>
+<label>الحشوة</label>
+<div class="row">
+  <select id="tblCharge" onchange="renderTable()" style="flex:1"></select>
+  <button class="btn blue sm" style="margin:0; width:auto; padding:0 10px;" onclick="addNewCharge()">➕ حشوة</button>
+</div>
 <div style="overflow-x:auto;margin-top:8px"><table class="tbl" id="tblTbl"></table></div>
 <button class="btn amber" onclick="saveTable()">💾 حفظ</button>
 <button class="btn sec sm" onclick="addRow()">➕ سطر</button>
@@ -283,27 +289,20 @@
   </select>
 </div>
 <div class="card">
-  <h3>🎨 التحكم بالأقواس (العام)</h3>
-  <label>لون القوس الافتراضي</label>
-  <input type="color" id="setArcColor" onchange="updateArcSettings()" style="height:40px; padding:2px;">
-  <label>شفافية القوس (0 شفاف - 1 معتم)</label>
-  <input type="range" id="setArcOpacity" min="0" max="1" step="0.05" oninput="updateArcSettings()">
+  <h3>⚙️ إدارة أنواع العتاد</h3>
+  <div class="row">
+    <input id="newEquipName" placeholder="مثال: M-46">
+    <button class="btn" style="margin:0" onclick="addEquipType()">➕ إضافة</button>
+  </div>
+  <div id="equipList" style="margin-top:10px"></div>
 </div>
 <div class="card">
-<h3>⚙️ إدارة العتاد</h3>
-<div class="row">
-<input id="newEquipName" placeholder="نوع العتاد">
-<button class="btn" style="margin:0" onclick="addEquipType()">➕ إضافة</button>
-</div>
-<div id="equipList" style="margin-top:10px"></div>
-</div>
-<div class="card">
-<h3>⚙️ إدارة الصمامات</h3>
-<div class="row">
-<input id="newFuzeName" placeholder="نوع الصمام">
-<button class="btn" style="margin:0" onclick="addFuzeType()">➕ إضافة</button>
-</div>
-<div id="fuzeList" style="margin-top:10px"></div>
+  <h3>⚙️ إدارة أنواع الصمامات</h3>
+  <div class="row">
+    <input id="newFuzeName" placeholder="مثال: انفجاري">
+    <button class="btn" style="margin:0" onclick="addFuzeType()">➕ إضافة</button>
+  </div>
+  <div id="fuzeList" style="margin-top:10px"></div>
 </div>
 </div>
 
