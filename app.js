@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "15") { localStorage.clear(); localStorage.setItem("ARTY_VER","15"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "16") { localStorage.clear(); localStorage.setItem("ARTY_VER","16"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -15,7 +15,7 @@ function dec(s){if(!s)throw 0;var L=s.length,i=0,sb='',tc;while(!/[A-Z]/.test(tc
 return{forward:function(lat,lon){var u=L2U(lat,lon),f=enc(u.e,u.n,u.zn);return{zone:u.zn+u.zl,sq:f.substring(0,2),e:f.substring(2,7),n:f.substring(7,12)};},inverse:function(m){var b=dec(m.toUpperCase().replace(/\s/g,''));return U2L(b.e,b.n,b.zn,b.zl);}};})();
 
 var D2R=Math.PI/180,R2D=180/Math.PI;
-var MILS=6400; // سيتم تحديثه من الإعدادات
+var MILS=6400; 
 var $=function(id){return document.getElementById(id);};
 
 function mkCurve(rmin,rmax,eMin,eMax,tMin,tMax,dMax){var pts=[],N=6;for(var i=0;i<=N;i++){var f=i/N,r=rmin+(rmax-rmin)*f,g=Math.pow(f,2.2);pts.push({r:Math.round(r/50)*50,e:+(eMin+(eMax-eMin)*g).toFixed(1),t:+(tMin+(tMax-tMin)*Math.pow(f,1.35)).toFixed(1),d:+(dMax*Math.pow(f,1.6)).toFixed(1)});}return pts;}
@@ -30,10 +30,12 @@ var DW={
 "kat107":{name:"كاتيوشا 107 ملم",max:8500,info:{caliber:"107 ملم",range:"8,500 م",crew:"4",rof:"12/دفعة",weight:"—",notes:"منصة"},charges:[{n:"وحيد",equip:"منصة",pts:mkCurve(1500,8500,60,380,6,28,25)}]},
 "grad":{name:"كراد 40 فوهة 122",max:20000,info:{caliber:"122 ملم",range:"20,000 م",crew:"5",rof:"40/20ث",weight:"—",notes:"BM-21"},charges:[{n:"وحيد",equip:"BM-21",pts:mkCurve(3000,20000,50,320,10,45,40)}]}};
 
-var DB={version:15,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
+var DB={version:16,pin:"1998",batteries:[],observers:[],targets:[],weapons:JSON.parse(JSON.stringify(DW)),
  equipTypes:["M-46", "D-20", "D-30", "هاون", "منصة", "BM-21"],
  fuzeTypes:["انفجاري", "تأخيري", "زمني", "دخاني"],
- milSystem: 6400
+ milSystem: 6400,
+ arcColor: "#4caf50",
+ arcOpacity: 0.15
 };
 var CORR={dirSide:'R',dirUnit:'mil',dirVal:0,rngSide:'A',rngVal:0};
 var CUR_WPN_ADD_BAT=null;
@@ -43,6 +45,8 @@ function save(){try{localStorage.setItem("ARTY_DB",JSON.stringify(DB));}catch(e)
 function load(){
   var s=localStorage.getItem("ARTY_DB");if(s){try{DB=JSON.parse(s);}catch(e){}}
   if(!DB.milSystem) DB.milSystem = 6400;
+  if(!DB.arcColor) DB.arcColor = "#4caf50";
+  if(DB.arcOpacity === undefined) DB.arcOpacity = 0.15;
   MILS = parseInt(DB.milSystem);
   for(var k in DW){if(!DB.weapons[k])DB.weapons[k]=JSON.parse(JSON.stringify(DW[k]));}
 }
@@ -51,7 +55,14 @@ function changeMilSystem(){
   DB.milSystem = parseInt($("setMilSystem").value);
   MILS = DB.milSystem;
   save();
-  alert("✔ تم تغيير النظام إلى " + MILS + " ملّي.\nتأكد من تعديل زوايا الأقواس والجداول.");
+  alert("✔ تم تغيير النظام إلى " + MILS + " ملّي.");
+}
+
+function updateArcSettings(){
+  DB.arcColor = $("setArcColor").value;
+  DB.arcOpacity = parseFloat($("setArcOpacity").value);
+  save();
+  refreshMapMarkers();
 }
 
 function readMGRS(p){var z=$(p+'Zone').value.trim().toUpperCase();var s=$(p+'Sq').value.trim().toUpperCase();var e=$(p+'E').value.trim(),n=$(p+'N').value.trim();if(!z||!s||!e||!n)return null;if(e.length!==5||n.length!==5)return null;try{return MGRS.inverse(z+s+e+n);}catch(err){return null;}}
@@ -73,6 +84,8 @@ function tab(id,el){
 
 function boot(){
   $("setMilSystem").value = DB.milSystem;
+  $("setArcColor").value = DB.arcColor;
+  $("setArcOpacity").value = DB.arcOpacity;
   refreshWeaponDropdowns();renderBats();renderObs();renderTargets();renderTable();refreshBatSelect();initMap();refreshMapMarkers();
 }
 function refreshWeaponDropdowns(){
@@ -159,11 +172,9 @@ function refreshMapMarkers(){
     L.marker([t.lat, t.lon], {icon:icon}).addTo(layerGroup).bindPopup(popupContent);
   });
 
-  // مسح الأقواس القديمة
   arcLayers.forEach(function(l){ map.removeLayer(l); });
   arcLayers = [];
   
-  // رسم أقواس لجميع الأسلحة في البطارية الحالية
   var b = getCurrentBat();
   if(b && b.weapons){
     b.weapons.forEach(function(w){
@@ -181,7 +192,7 @@ function refreshMapMarkers(){
       }
       arcPoints.push([w.lat, w.lon]);
 
-      var arc = L.polygon(arcPoints, {color: 'rgba(76, 175, 80, 0.6)', weight: 1, fillColor: '#4caf50', fillOpacity: 0.05}).addTo(map);
+      var arc = L.polygon(arcPoints, {color: DB.arcColor, weight: 2, fillColor: DB.arcColor, fillOpacity: DB.arcOpacity}).addTo(map);
       arcLayers.push(arc);
     });
   }
@@ -466,9 +477,88 @@ function addObs(){var name=$("noName").value.trim()||("راصد "+(DB.observers.
 function delObs(id){if(!confirm("حذف؟"))return;DB.observers=DB.observers.filter(function(o){return o.id!==id;});save();renderObs();refreshMapMarkers();}
 function renderObs(){var el=$("obsList");if(!DB.observers.length){el.innerHTML='<div style="color:var(--dim);font-size:11px">لا يوجد</div>';return;}var h='';DB.observers.forEach(function(o){h+='<div class="item"><b>'+o.name+'</b><button class="btn red sm" onclick="delObs('+o.id+')">حذف</button></div>';});el.innerHTML=h;}
 
-function saveTarget(){var ll=readMGRS('t');if(!ll){alert("أدخل MGRS");return;}var name=$("tName").value.trim()||("هدف "+(DB.targets.length+1));var m=MGRS.forward(ll.lat,ll.lon);DB.targets.push({id:Date.now(),name:name,zone:m.zone,sq:m.sq,e:m.e,n:m.n,lat:ll.lat,lon:ll.lon,alt:parseFloat($("tAlt").value)||0});save();renderTargets();refreshMapMarkers();$("tName").value="";alert("✔ تم");}
-function delTarget(id){if(!confirm("حذف؟"))return;DB.targets=DB.targets.filter(function(t){return t.id!==id;});save();renderTargets();refreshMapMarkers();}
-function renderTargets(){var el=$("tgtList");if(!DB.targets.length){el.innerHTML='<div style="color:var(--dim);font-size:11px">لا توجد</div>';return;}var h='';DB.targets.forEach(function(t){h+='<div class="item"><b>'+t.name+'</b><button class="btn red sm" onclick="delTarget('+t.id+')">🗑️</button></div>';});el.innerHTML=h;}
+// ميزات الأهداف الجديدة
+function addTargetFromList() {
+    var z=$("ntZone").value.trim().toUpperCase();
+    var s=$("ntSq").value.trim().toUpperCase();
+    var e=$("ntE").value.trim();
+    var n=$("ntN").value.trim();
+    if(!z||!s||!e||!n||e.length!==5||n.length!==5){alert("أدخل MGRS كامل (Zone, Square, 5 أرقام شرقي, 5 شمالي)");return;}
+    try{
+        var ll=MGRS.inverse(z+s+e+n);
+        var name=$("ntName").value.trim()||("هدف "+(DB.targets.length+1));
+        DB.targets.push({id:Date.now(),name:name,zone:z,sq:s,e:e,n:n,lat:ll.lat,lon:ll.lon,alt:parseFloat($("ntAlt").value)||0});
+        save();renderTargets();refreshMapMarkers();
+        $("ntName").value=""; $("ntE").value=""; $("ntN").value=""; $("ntAlt").value="0";
+        alert("✔ تم حفظ الهدف: " + name);
+    }catch(err){alert("MGRS غير صالح");}
+}
+
+function editTargetFromList(id){
+    var t = DB.targets.find(function(x){return x.id == id;});
+    if(!t) return;
+    $("ntName").value=t.name; $("ntZone").value=t.zone; $("ntSq").value=t.sq;
+    $("ntE").value=t.e; $("ntN").value=t.n; $("ntAlt").value=t.alt;
+    $("ntE").focus();
+}
+
+function saveFireCardFromTarget(id){
+    var t = DB.targets.find(function(x){return x.id == id;});
+    if(!t) return;
+    var bat=getCurrentBat();
+    var w=getCurrentWeapon();
+    if(!bat||!w){alert("اختر بطارية وسلاح أولاً من تبويب النار"); return;}
+
+    var baseRange=dist(w.lat,w.lon,t.lat,t.lon);
+    var baseAzMil=toMil(bearing(w.lat,w.lon,t.lat,t.lon));
+    var wt=DB.weapons[w.type];
+    
+    var chIdx=$("selCharge").value,charge,point;
+    if(chIdx==="auto"){
+        var found=-1;
+        for(var j=0;j<wt.charges.length;j++){
+            var p=wt.charges[j].pts;
+            if(wt.charges[j].equip === w.equip && baseRange<=p[p.length-1].r){found=j;break;}
+        }
+        if(found===-1)found=0;
+        chIdx=found;
+    }
+    charge=wt.charges[+chIdx];
+    point=interp(charge.pts,baseRange);
+    
+    var dh=t.alt-w.alt; var site=baseRange>0?(dh/baseRange)*1000:0;
+    var windSpeed=parseFloat($("wind").value)||0;
+    var windCorr=windSpeed*0.1;
+    var finalElev=point.e+site+(parseFloat($("elevCorr").value)||0);
+    var finalDefl=(baseAzMil+point.d+windCorr+MILS)%MILS;
+    
+    if(!DB.fireLog)DB.fireLog=[];
+    var now = new Date().toLocaleString('ar-EG');
+    DB.fireLog.push({date:now, target:t.name, bat:bat.name, wpn:w.name, elev:finalElev.toFixed(0), defl:finalDefl.toFixed(0), charge:charge.n});
+    save();
+    
+    alert("✔ تم حساب وحفظ بطاقة النار للهدف: "+t.name+"\nالزاوية: "+finalElev.toFixed(0)+" | الانحراف: "+finalDefl.toFixed(0));
+}
+
+function delTarget(id){if(!confirm("حذف الهدف؟"))return;DB.targets=DB.targets.filter(function(t){return t.id!==id;});save();renderTargets();refreshMapMarkers();}
+
+function renderTargets(){
+    var el=$("tgtList");
+    if(!DB.targets.length){el.innerHTML='<div style="color:var(--dim);font-size:11px">لا توجد أهداف</div>';return;}
+    var h='';
+    DB.targets.forEach(function(t){
+        h+='<div class="item">'+
+           '<b>'+t.name+'</b>'+
+           '<div class="info">MGRS: <span class="mg">'+t.zone+' '+t.sq+' '+t.e+' '+t.n+'</span></div>'+
+           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px">'+
+           '<button class="btn sm" onclick="fireFromMapTarget('+t.id+')">🔥 رمي</button>'+
+           '<button class="btn amber sm" onclick="saveFireCardFromTarget('+t.id+')">💾 حفظ البطاقة</button>'+
+           '<button class="btn sec sm" onclick="editTargetFromList('+t.id+')">✏️ تعديل</button>'+
+           '<button class="btn red sm" onclick="delTarget('+t.id+')">🗑️ حذف</button>'+
+           '</div></div>';
+    });
+    el.innerHTML=h;
+}
 
 function exportData(){var blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="arty_backup.json";a.click();}
 function importData(){$("fileIn").click();}
