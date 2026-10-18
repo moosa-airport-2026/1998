@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "19") { localStorage.clear(); localStorage.setItem("ARTY_VER","19"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "20") { localStorage.clear(); localStorage.setItem("ARTY_VER","20"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -21,16 +21,16 @@ var $=function(id){return document.getElementById(id);};
 function mkCurve(rmin,rmax,eMin,eMax,tMin,tMax,dMax){var pts=[],N=6;for(var i=0;i<=N;i++){var f=i/N,r=rmin+(rmax-rmin)*f,g=Math.pow(f,2.2);pts.push({r:Math.round(r/50)*50,e:+(eMin+(eMax-eMin)*g).toFixed(1),t:+(tMin+(tMax-tMin)*Math.pow(f,1.35)).toFixed(1),d:+(dMax*Math.pow(f,1.6)).toFixed(1)});}return pts;}
 
 var DW={
-"130":{name:"مدفع 130 ملم",max:27150,info:{caliber:"130 ملم",range:"27,150 م",crew:"9",rof:"5-6/د",weight:"6,300 كغ",notes:"M-46"},charges:[{n:"1",equip:"M-46",pts:mkCurve(3000,9000,120,420,6,22,6)},{n:"2",equip:"M-46",pts:mkCurve(6000,15000,90,400,8,32,10)},{n:"3",equip:"M-46",pts:mkCurve(10000,27150,70,520,11,52,20)}]},
-"152":{name:"مدفع 152 ملم",max:24000,info:{caliber:"152 ملم",range:"24,000 م",crew:"8",rof:"4-5/د",weight:"5,700 كغ",notes:"D-20"},charges:[{n:"1",equip:"D-20",pts:mkCurve(3000,8000,120,430,6,21,5)},{n:"2",equip:"D-20",pts:mkCurve(6000,14000,90,410,8,30,9)},{n:"3",equip:"D-20",pts:mkCurve(10000,24000,70,510,11,48,18)}]},
-"122":{name:"مدفع 122 ملم (D-30)",max:15300,info:{caliber:"122 ملم",range:"15,300 م",crew:"7",rof:"6-8/د",weight:"3,210 كغ",notes:"D-30"},charges:[{n:"1",equip:"D-30",pts:mkCurve(1500,5000,110,400,4,16,3)},{n:"2",equip:"D-30",pts:mkCurve(3000,9000,85,390,6,24,6)},{n:"كامل",equip:"D-30",pts:mkCurve(6000,15300,70,470,9,42,14)}]},
-"m120":{name:"هاون 120 ملم",max:7100,info:{caliber:"120 ملم",range:"7,100 م",crew:"4",rof:"10-15/د",weight:"144 كغ",notes:"هاون"},charges:[{n:"1",equip:"هاون",pts:mkCurve(400,2000,400,900,3,12,1)},{n:"2",equip:"هاون",pts:mkCurve(1000,4000,320,850,5,20,2)},{n:"3",equip:"هاون",pts:mkCurve(2000,7100,250,800,7,30,4)}]},
-"m82":{name:"هاون 82 ملم",max:3900,info:{caliber:"82 ملم",range:"3,900 م",crew:"3",rof:"15-20/د",weight:"56 كغ",notes:"هاون"},charges:[{n:"1",equip:"هاون",pts:mkCurve(200,1200,380,900,2,9,1)},{n:"2",equip:"هاون",pts:mkCurve(600,2400,300,850,4,14,2)},{n:"3",equip:"هاون",pts:mkCurve(1200,3900,240,800,6,20,3)}]},
-"m60":{name:"هاون 60 ملم",max:2500,info:{caliber:"60 ملم",range:"2,500 م",crew:"2",rof:"20-25/د",weight:"20 كغ",notes:"هاون"},charges:[{n:"1",equip:"هاون",pts:mkCurve(150,900,380,900,2,8,1)},{n:"2",equip:"هاون",pts:mkCurve(500,1600,300,850,3,12,2)},{n:"3",equip:"هاون",pts:mkCurve(900,2500,250,800,5,16,3)}]},
-"kat107":{name:"كاتيوشا 107 ملم",max:8500,info:{caliber:"107 ملم",range:"8,500 م",crew:"4",rof:"12/دفعة",weight:"—",notes:"منصة"},charges:[{n:"وحيد",equip:"منصة",pts:mkCurve(1500,8500,60,380,6,28,25)}]},
-"grad":{name:"كراد 40 فوهة 122",max:20000,info:{caliber:"122 ملم",range:"20,000 م",crew:"5",rof:"40/20ث",weight:"—",notes:"BM-21"},charges:[{n:"وحيد",equip:"BM-21",pts:mkCurve(3000,20000,50,320,10,45,40)}]}};
+"130":{name:"مدفع 130 ملم",max:27150,info:{caliber:"130 ملم",range:"27,150 م",crew:"9",rof:"5-6/د",weight:"6,300 كغ",notes:"M-46"},charges:[{n:"1",equip:"M-46",pts:[{r:3000,e:120,t:6,d:6}]},{n:"2",equip:"M-46",pts:[{r:6000,e:90,t:8,d:10}]},{n:"3",equip:"M-46",pts:[{r:10000,e:70,t:11,d:20}]}]},
+"152":{name:"مدفع 152 ملم",max:24000,info:{caliber:"152 ملم",range:"24,000 م",crew:"8",rof:"4-5/د",weight:"5,700 كغ",notes:"D-20"},charges:[{n:"1",equip:"D-20",pts:[{r:3000,e:120,t:6,d:5}]},{n:"2",equip:"D-20",pts:[{r:6000,e:90,t:8,d:9}]},{n:"3",equip:"D-20",pts:[{r:10000,e:70,t:11,d:18}]}]},
+"122":{name:"مدفع 122 ملم (D-30)",max:15300,info:{caliber:"122 ملم",range:"15,300 م",crew:"7",rof:"6-8/د",weight:"3,210 كغ",notes:"D-30"},charges:[{n:"1",equip:"D-30",pts:[{r:1500,e:110,t:4,d:3}]},{n:"2",equip:"D-30",pts:[{r:3000,e:85,t:6,d:6}]},{n:"كامل",equip:"D-30",pts:[{r:6000,e:70,t:9,d:14}]}]},
+"m120":{name:"هاون 120 ملم",max:7100,info:{caliber:"120 ملم",range:"7,100 م",crew:"4",rof:"10-15/د",weight:"144 كغ",notes:"هاون"},charges:[{n:"1",equip:"هاون",pts:[{r:400,e:400,t:3,d:1}]},{n:"2",equip:"هاون",pts:[{r:1000,e:320,t:5,d:2}]},{n:"3",equip:"هاون",pts:[{r:2000,e:250,t:7,d:4}]}]},
+"m82":{name:"هاون 82 ملم",max:3900,info:{caliber:"82 ملم",range:"3,900 م",crew:"3",rof:"15-20/د",weight:"56 كغ",notes:"هاون"},charges:[{n:"1",equip:"هاون",pts:[{r:200,e:380,t:2,d:1}]},{n:"2",equip:"هاون",pts:[{r:600,e:300,t:4,d:2}]},{n:"3",equip:"هاون",pts:[{r:1200,e:240,t:6,d:3}]}]},
+"m60":{name:"هاون 60 ملم",max:2500,info:{caliber:"60 ملم",range:"2,500 م",crew:"2",rof:"20-25/د",weight:"20 كغ",notes:"هاون"},charges:[{n:"1",equip:"هاون",pts:[{r:150,e:380,t:2,d:1}]},{n:"2",equip:"هاون",pts:[{r:500,e:300,t:3,d:2}]},{n:"3",equip:"هاون",pts:[{r:900,e:250,t:5,d:3}]}]},
+"kat107":{name:"كاتيوشا 107 ملم",max:8500,info:{caliber:"107 ملم",range:"8,500 م",crew:"4",rof:"12/دفعة",weight:"—",notes:"منصة"},charges:[{n:"وحيد",equip:"منصة",pts:[{r:1500,e:60,t:6,d:25}]}]},
+"grad":{name:"كراد 40 فوهة 122",max:20000,info:{caliber:"122 ملم",range:"20,000 م",crew:"5",rof:"40/20ث",weight:"—",notes:"BM-21"},charges:[{n:"وحيد",equip:"BM-21",pts:[{r:3000,e:50,t:10,d:40}]}]}};
 
-var DB={version:19,pin:"1998",batteries:[],targets:[],restrictedTargets:[],weapons:JSON.parse(JSON.stringify(DW)),
+var DB={version:20,pin:"1998",batteries:[],targets:[],restrictedTargets:[],weapons:JSON.parse(JSON.stringify(DW)),
  equipTypes:["M-46", "D-20", "D-30", "هاون", "منصة", "BM-21"],
  fuzeTypes:["انفجاري", "تأخيري", "زمني", "دخاني"],
  milSystem: 6400,
@@ -53,31 +53,15 @@ function load(){
 }
 
 function changeMilSystem(){ DB.milSystem = parseInt($("setMilSystem").value); MILS = DB.milSystem; save(); alert("✔ تم تغيير النظام."); }
-function updateArcSettings(){ DB.arcColor = $("setArcColor").value; DB.arcOpacity = parseFloat($("setArcOpacity").value); save(); refreshMapMarkers(); }
 
-// إصلاح إضافة العتاد والصمامات
 function addEquipType(){
-  var v = $("newEquipName").value.trim();
-  if(!v) return;
-  if(DB.equipTypes.indexOf(v) === -1) {
-    DB.equipTypes.push(v);
-    save();
-    renderSetupLists();
-    $("newEquipName").value = "";
-    alert("✔ تم إضافة العتاد: " + v);
-  }
+  var v = $("newEquipName").value.trim(); if(!v) return;
+  if(DB.equipTypes.indexOf(v) === -1) { DB.equipTypes.push(v); save(); renderSetupLists(); $("newEquipName").value = ""; alert("✔ تم إضافة العتاد"); }
 }
 function delEquipType(i){ DB.equipTypes.splice(i,1); save(); renderSetupLists(); }
 function addFuzeType(){
-  var v = $("newFuzeName").value.trim();
-  if(!v) return;
-  if(DB.fuzeTypes.indexOf(v) === -1) {
-    DB.fuzeTypes.push(v);
-    save();
-    renderSetupLists();
-    $("newFuzeName").value = "";
-    alert("✔ تم إضافة الصمام: " + v);
-  }
+  var v = $("newFuzeName").value.trim(); if(!v) return;
+  if(DB.fuzeTypes.indexOf(v) === -1) { DB.fuzeTypes.push(v); save(); renderSetupLists(); $("newFuzeName").value = ""; alert("✔ تم إضافة الصمام"); }
 }
 function delFuzeType(i){ DB.fuzeTypes.splice(i,1); save(); renderSetupLists(); }
 
@@ -195,7 +179,6 @@ function refreshMapMarkers(){
     L.marker([t.lat, t.lon], {icon:icon}).addTo(layerGroup).bindPopup('<b>'+t.name+'</b><br>هدف');
   });
   
-  // رسم الأهداف المحظورة (دوائر)
   if(DB.restrictedTargets) {
       DB.restrictedTargets.forEach(function(t){
         var r = t.radius || 250;
@@ -432,7 +415,6 @@ function calcFire(){
   
   var tLat = ll.lat, tLon = ll.lon;
 
-  // التحقق من الأهداف المحظورة
   if(DB.restrictedTargets) {
       for(var i=0; i<DB.restrictedTargets.length; i++) {
           var r = DB.restrictedTargets[i];
@@ -520,16 +502,35 @@ function onTblWeaponChange(){
   renderTable();
 }
 
-// إضافة حشوة جديدة
-function addNewCharge() {
+// إضافة حشوة
+function addCharge() {
     var wk = $("tblWeapon").value;
     var w = DB.weapons[wk];
     if(!w) { alert("اختر سلاحاً أولاً"); return; }
-    var name = prompt("أدخل اسم/رقم الحشوة الجديدة (مثال: 4 أو كامل):");
-    if(!name) return;
-    var eq = $("tblEquip").value || w.charges[0].equip; 
-    w.charges.push({ n: name, equip: eq, pts: [] });
-    save(); renderTable(); alert("✔ تم إضافة الحشوة");
+    var eq = $("tblEquip").value || (w.charges[0] ? w.charges[0].equip : "M-46");
+    var nextNum = w.charges.length + 1;
+    
+    w.charges.push({ n: nextNum.toString(), equip: eq, pts: [] });
+    save();
+    renderTable();
+    $("tblCharge").value = w.charges.length - 1;
+    renderTable();
+    alert("✔ تم إضافة حشوة رقم " + nextNum);
+}
+
+// حذف حشوة
+function deleteCharge() {
+    var wk = $("tblWeapon").value;
+    var w = DB.weapons[wk];
+    var ci = +$("tblCharge").value;
+    if(!w || isNaN(ci) || !w.charges[ci]) { alert("اختر حشوة لحذفها"); return; }
+    if(w.charges.length <= 1) { alert("لا يمكن حذف الحشوة الوحيدة"); return; }
+    if(!confirm("هل تريد حذف هذه الحشوة نهائياً؟")) return;
+    
+    w.charges.splice(ci, 1);
+    save();
+    renderTable();
+    alert("✔ تم حذف الحشوة");
 }
 
 function renderTable(){
@@ -541,13 +542,54 @@ function renderTable(){
   cs.innerHTML=h;
   if(cur&&cur<w.charges.length)cs.value=cur;
   var ci=+cs.value||0,ch=w.charges[ci];if(!ch){ $("tblTbl").innerHTML=''; return;}
-  var html='<tr><th>المدى</th><th>الزاوية</th><th>الزمن</th><th>الانحراف</th><th></th></tr>';
-  ch.pts.forEach(function(p,i){html+='<tr><td><input type="number" value="'+p.r+'" data-i="'+i+'" data-f="r"></td><td><input type="number" step="0.1" value="'+p.e+'" data-i="'+i+'" data-f="e"></td><td><input type="number" step="0.1" value="'+p.t+'" data-i="'+i+'" data-f="t"></td><td><input type="number" step="0.1" value="'+p.d+'" data-i="'+i+'" data-f="d"></td><td><button class="del" onclick="delRow('+i+')">✕</button></td></tr>';});
+  
+  // الأعمدة المطلوبة
+  var html='<tr>'+
+    '<th>المدى</th><th>الزاوية</th><th>الزمن</th><th>الانحراف</th>'+
+    '<th>الضغط</th><th>فرق السرعة</th><th>الحيدان</th><th>المقياس</th><th>تصحيح الزاوية</th>'+
+    '<th>السدادة الرقابية</th><th>سدادة المركبة</th><th></th></tr>';
+    
+  ch.pts.forEach(function(p,i){
+    html+='<tr>'+
+    '<td><input type="number" value="'+(p.r||0)+'" data-i="'+i+'" data-f="r"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.e||0)+'" data-i="'+i+'" data-f="e"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.t||0)+'" data-i="'+i+'" data-f="t"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.d||0)+'" data-i="'+i+'" data-f="d"></td>'+
+    '<td><input type="number" value="'+(p.press||0)+'" data-i="'+i+'" data-f="press"></td>'+
+    '<td><input type="number" value="'+(p.dv||0)+'" data-i="'+i+'" data-f="dv"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.jump||0)+'" data-i="'+i+'" data-f="jump"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.fuze||0)+'" data-i="'+i+'" data-f="fuze"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.ecorr||0)+'" data-i="'+i+'" data-f="ecorr"></td>'+
+    '<td><input type="number" value="'+(p.neck||0)+'" data-i="'+i+'" data-f="neck"></td>'+
+    '<td><input type="number" value="'+(p.base||0)+'" data-i="'+i+'" data-f="base"></td>'+
+    '<td><button class="del" onclick="delRow('+i+')">✕</button></td>'+
+    '</tr>';
+  });
   $("tblTbl").innerHTML=html;
 }
-function saveTable(){var wk=$("tblWeapon").value,w=DB.weapons[wk],ci=+$("tblCharge").value;var inputs=$("tblTbl").querySelectorAll("input");for(var j=0;j<inputs.length;j++){var inp=inputs[j],i=+inp.getAttribute("data-i"),f=inp.getAttribute("data-f");w.charges[ci].pts[i][f]=parseFloat(inp.value)||0;}w.charges[ci].pts.sort(function(a,b){return a.r-b.r;});save();renderTable();alert("✔ تم");}
-function addRow(){var wk=$("tblWeapon").value,ci=+$("tblCharge").value;DB.weapons[wk].charges[ci].pts.push({r:0,e:0,t:0,d:0});save();renderTable();}
-function delRow(i){var wk=$("tblWeapon").value,ci=+$("tblCharge").value;DB.weapons[wk].charges[ci].pts.splice(i,1);save();renderTable();}
+
+function saveTable(){
+  var wk=$("tblWeapon").value,w=DB.weapons[wk],ci=+$("tblCharge").value;
+  var inputs=$("tblTbl").querySelectorAll("input");
+  for(var j=0;j<inputs.length;j++){
+    var inp=inputs[j],i=+inp.getAttribute("data-i"),f=inp.getAttribute("data-f");
+    w.charges[ci].pts[i][f]=parseFloat(inp.value)||0;
+  }
+  w.charges[ci].pts.sort(function(a,b){return (a.r||0)-(b.r||0);});
+  save();renderTable();alert("✔ تم الحفظ");
+}
+
+function addRow(){
+  var wk=$("tblWeapon").value,ci=+$("tblCharge").value;
+  DB.weapons[wk].charges[ci].pts.push({r:0,e:0,t:0,d:0,press:0,dv:0,jump:0,fuze:0,ecorr:0,neck:0,base:0});
+  save();renderTable();
+}
+
+function delRow(i){
+  var wk=$("tblWeapon").value,ci=+$("tblCharge").value;
+  DB.weapons[wk].charges[ci].pts.splice(i,1);
+  save();renderTable();
+}
 
 function openOCR(){$("importPanel").style.display="block";$("importTitle").textContent="📷 استيراد من صورة";$("importPhotoBox").style.display="block";$("importPasteBox").style.display="none";$("importPreview").style.display="none";$("ocrProgress").textContent="";$("importPanel").scrollIntoView();}
 function openPaste(){$("importPanel").style.display="block";$("importTitle").textContent="📋 استيراد من نص";$("importPhotoBox").style.display="none";$("importPasteBox").style.display="block";$("importPreview").style.display="none";$("pasteArea").value="";$("importPanel").scrollIntoView();}
@@ -563,7 +605,7 @@ function parseTableText(text){
     if(!nums)continue;if(nums.length<3)continue;
     var r=parseFloat(nums[0]);var e=parseFloat(nums[1]);var t=parseFloat(nums[2]);var d=nums[3]!==undefined?parseFloat(nums[3]):0;
     if(r<50||r>100000)continue;if(e<0||e>1600)continue;
-    rows.push({r:r,e:e,t:t,d:d});
+    rows.push({r:r,e:e,t:t,d:d,press:0,dv:0,jump:0,fuze:0,ecorr:0,neck:0,base:0});
   }
   if(!rows.length){alert("لم يتم العثور على بيانات صالحة");return;}
   IMPORT_ROWS=rows;showPreview();
@@ -608,7 +650,7 @@ function editTargetFromList(id){
 function saveFireCardFromTarget(id){
     var t = DB.targets.find(function(x){return x.id == id;}); if(!t) return;
     var bat=getCurrentBat(); var w=getCurrentWeapon(); if(!bat||!w){alert("اختر بطارية وسلاح أولاً"); return;}
-    // تحقق من الأهداف المحظورة
+    
     if(DB.restrictedTargets) {
         for(var i=0; i<DB.restrictedTargets.length; i++) {
             var res = DB.restrictedTargets[i];
@@ -616,6 +658,7 @@ function saveFireCardFromTarget(id){
             if(d <= (res.radius || 250)) { alert("⛔ الهدف يقع داخل منطقة محظورة: " + res.name); return; }
         }
     }
+    
     var baseRange=dist(w.lat,w.lon,t.lat,t.lon); var baseAzMil=toMil(bearing(w.lat,w.lon,t.lat,t.lon)); var wt=DB.weapons[w.type];
     var chIdx=$("selCharge").value,charge,point;
     if(chIdx==="auto"){
