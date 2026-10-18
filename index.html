@@ -82,7 +82,6 @@
 </div>
 </div>
 
-<!-- تبويب الأهداف المحدث -->
 <div class="pg" id="pg-tgt">
   <div class="card">
     <h3>🎯 إضافة هدف جديد</h3>
@@ -99,11 +98,21 @@
     <button class="btn" onclick="addTargetFromList()">💾 حفظ الهدف</button>
   </div>
   <div class="card"><h3>قائمة الأهداف المحفوظة</h3><div id="tgtList"></div></div>
+  
+  <div class="card">
+    <h3>⛔ بنك الأهداف المحظورة</h3>
+    <label>اسم الموقع المحظور</label>
+    <div class="row">
+      <input id="rtName" placeholder="مستشفى / مسجد">
+      <button class="btn red" style="margin:0; padding:0 10px;" onclick="addRestrictedFromList()">➕ إضافة</button>
+    </div>
+    <div id="resList" style="margin-top:10px"></div>
+  </div>
 </div>
 
 <div class="pg" id="pg-bat">
 <div class="card">
-<h3>إضافة بطارية</h3>
+<h3 id="batFormTitle">إضافة بطارية جديدة</h3>
 <label>اسم البطارية</label><input id="nbName" placeholder="البطارية الأولى">
 <div class="mgbox">
 <label>مركز البطارية - الشرقي</label>
@@ -126,11 +135,25 @@
 <div><label>رطوبة (%)</label><input id="nbHumid" type="number" value="50"></div>
 <div><label>---</label></div>
 </div>
-<button class="btn" onclick="addBat()">➕ إضافة بطارية</button>
+
+<h3 style="margin-top:15px; border-top:1px dashed var(--brd); padding-top:10px;">👁️ بيانات الراصد (اختياري)</h3>
+<label>اسم الراصد</label><input id="nbObsName" placeholder="راصد 1">
+<div class="mgbox">
+<label>الشرقي</label><input id="nbObsE" maxlength="5" placeholder="12345">
+<label>الشمالي</label><input id="nbObsN" maxlength="5" placeholder="67890">
+<div class="mgrow">
+<div><label>Zone</label><input id="nbObsZone" maxlength="3" placeholder="38S"></div>
+<div><label>Square</label><input id="nbObsSq" maxlength="2" placeholder="MB"></div>
+</div>
+</div>
+<label>الارتفاع (م)</label><input id="nbObsAlt" type="number" value="0">
+
+<button class="btn" id="btnAddBat" onclick="addBat()">➕ إضافة بطارية</button>
+<button class="btn sec" id="btnCancelBat" onclick="cancelEditBat()" style="display:none">✕ إلغاء التعديل</button>
 </div>
 
 <div class="card" id="wpnAddCard" style="display:none">
-<h3>إضافة سلاح إلى: <span id="wpnBatName" style="color:var(--amber)"></span></h3>
+<h3 id="wpnFormTitle">إضافة سلاح إلى: <span id="wpnBatName" style="color:var(--amber)"></span></h3>
 <label>نوع السلاح</label><select id="nwType" onchange="onWpnTypeChange()"></select>
 <label>اسم السلاح (اختياري)</label><input id="nwName" placeholder="المدفع 1">
 <div class="mgbox">
@@ -157,38 +180,21 @@
 <div><label>نوع العتاد</label><select id="nwEquip"></select></div>
 <div><label>نوع الصمام</label><select id="nwFuze"></select></div>
 </div>
-<button class="btn" onclick="addWeapon()">➕ إضافة</button>
+<div class="row" style="margin-top:6px">
+  <div><label>رقم الشاخص</label><input id="nwShakhes" type="number" value="0"></div>
+  <div><label>لون القوس</label><input type="color" id="nwArcColor" value="#4caf50" style="height:35px; padding:2px;"></div>
+</div>
+<button class="btn" id="btnAddWpn" onclick="addWeapon()">➕ إضافة</button>
 <button class="btn sec" onclick="hideWeaponForm()">✕ إلغاء</button>
 </div>
 <div class="card"><h3>البطاريات</h3><div id="batList"></div></div>
-</div>
-
-<div class="pg" id="pg-obs">
-<div class="card">
-<h3>إضافة راصد</h3>
-<label>اسم الراصد</label><input id="noName" placeholder="راصد 1">
-<div class="mgbox">
-<label>الشرقي</label>
-<input id="noE" inputmode="numeric" maxlength="5" placeholder="12345" oninput="obsChanged()">
-<label>الشمالي</label>
-<input id="noN" inputmode="numeric" maxlength="5" placeholder="67890" oninput="obsChanged()">
-<div class="mgrow">
-<div><label>Zone</label><input id="noZone" maxlength="3" placeholder="38S" oninput="obsChanged()"></div>
-<div><label>Square</label><input id="noSq" maxlength="2" placeholder="MB" oninput="obsChanged()"></div>
-</div>
-<div id="noHint" class="hint"></div>
-</div>
-<label>الارتفاع (م)</label><input id="noAlt" type="number" value="0">
-<button class="btn" onclick="addObs()">➕ إضافة</button>
-</div>
-<div class="card"><h3>الراصدون</h3><div id="obsList"></div></div>
 </div>
 
 <div class="pg" id="pg-map">
 <div class="card">
 <h3>🗺️ الخريطة التكتيكية</h3>
 <div id="map1"></div>
-<div id="mapInfo" class="mapinfo">اضغط على الخريطة لتحديد هدف</div>
+<div id="mapInfo" class="mapinfo">اضغط على الخريطة لخيارات الهدف</div>
 <div class="row" style="margin-top:5px">
 <button class="btn blue sm" onclick="drawLine('fire')">🎯 خط الرمي</button>
 <button class="btn amber sm" onclick="drawLine('corr')">🔧 خط التصحيح</button>
@@ -262,8 +268,8 @@
   </select>
 </div>
 <div class="card">
-  <h3>🎨 التحكم بالأقواس (الخريطة)</h3>
-  <label>لون القوس</label>
+  <h3>🎨 التحكم بالأقواس (العام)</h3>
+  <label>لون القوس الافتراضي</label>
   <input type="color" id="setArcColor" onchange="updateArcSettings()" style="height:40px; padding:2px;">
   <label>شفافية القوس (0 شفاف - 1 معتم)</label>
   <input type="range" id="setArcOpacity" min="0" max="1" step="0.05" oninput="updateArcSettings()">
@@ -291,7 +297,6 @@
 <button onclick="tab('map',this)"><span class="ic">🗺️</span>خريطة</button>
 <button onclick="tab('tgt',this)"><span class="ic">💾</span>أهداف</button>
 <button onclick="tab('bat',this)"><span class="ic">🏛️</span>كتيبة</button>
-<button onclick="tab('obs',this)"><span class="ic">👁️</span>راصد</button>
 <button onclick="tab('tbl',this)"><span class="ic">📊</span>جداول</button>
 <button onclick="tab('setup',this)"><span class="ic">⚙️</span>إعدادات</button>
 </div>
