@@ -54,18 +54,32 @@
 <button class="btn blue" onclick="findBestWeapon()">🤖 حدد أفضل سلاح</button>
 <div id="candidatesList" style="margin-top:8px"></div>
 </div>
-<div class="card"><h3>3️⃣ التصحيحات الجوية</h3>
+
+<!-- التصحيحات الجوية والبالستية المتقدمة -->
+<div class="card"><h3>3️⃣ التصحيحات البالستية والجوية</h3>
 <div id="envInfo" style="font-size:11px;color:var(--amber);margin-bottom:5px"></div>
-<div class="row3">
+<div class="row">
 <div><label>حشوة</label><select id="selCharge"><option value="auto">تلقائي</option></select></div>
-<div><label>ريح (م/ث)</label><input id="wind" type="number" value="0"></div>
-<div><label>ريح mil</label><input id="windDir" type="number" value="0"></div>
+<div><label>فرق السرعة الابتدائية (ΔV م/ث)</label><input id="deltaV" type="number" value="0"></div>
 </div>
-<label>تصحيح الزاوية (mil)</label><input id="elevCorr" type="number" value="0" step="0.1">
+<div class="row">
+<div><label>تصحيح الحيدان (mil)</label><input id="jumpCorr" type="number" value="0" step="0.1"></div>
+<div><label>تصحيح الزاوية (mil)</label><input id="elevCorr" type="number" value="0" step="0.1"></div>
 </div>
+<div class="row">
+<div><label>مقياس الملات (ث)</label><input id="fuzeTime" type="number" value="0" step="0.1"></div>
+<div><label>السدادة الرقابية</label><input id="fuzeNeck" type="number" value="0"></div>
+</div>
+<div class="row">
+<div><label>سدادة المركبة</label><input id="fuzeBase" type="number" value="0"></div>
+<div><label>---</label></div>
+</div>
+</div>
+
 <button class="btn" onclick="calcFire()">🔥 احسب بطاقة النار</button>
 <div id="fireOut"></div>
-<div class="card"><h3>🔧 تصحيح النار</h3>
+
+<div class="card"><h3>🔧 تصحيح النار (بعد الرمي)</h3>
 <div class="corrbox">
 <div class="row3">
 <div><label>الاتجاه</label><select id="corrDir"><option value="R">يمين</option><option value="L">يسار</option><option value="E">شرقي</option><option value="W">غربي</option></select></div>
@@ -131,12 +145,12 @@
 <div><label>اتجاه الريح (mil)</label><input id="nbWindDir" type="number" value="0"></div>
 </div>
 <div class="row3" style="margin-top:5px">
-<div><label>حرارة (C)</label><input id="nbTemp" type="number" value="25"></div>
+<div><label>حرارة الهواء (C)</label><input id="nbTemp" type="number" value="15"></div>
+<div><label>الضغط الجوي (mmHg)</label><input id="nbPress" type="number" value="750"></div>
 <div><label>رطوبة (%)</label><input id="nbHumid" type="number" value="50"></div>
-<div><label>---</label></div>
 </div>
 
-<h3 style="margin-top:15px; border-top:1px dashed var(--brd); padding-top:10px;">👁️ بيانات الراصد (اختياري)</h3>
+<h3 style="margin-top:15px; border-top:1px dashed var(--brd); padding-top:10px;">👁️ بيانات الراصد</h3>
 <label>اسم الراصد</label><input id="nbObsName" placeholder="راصد 1">
 <div class="mgbox">
 <label>الشرقي</label><input id="nbObsE" maxlength="5" placeholder="12345">
@@ -167,9 +181,10 @@
 </div>
 </div>
 <label>ارتفاع السلاح (فارغ = ارتفاع البطارية)</label><input id="nwAlt" type="number">
-<div class="row">
+<div class="row3" style="margin-top:5px">
 <div><label>أقل مدى</label><input id="nwMinR" type="number" value="1000"></div>
 <div><label>أقصى مدى</label><input id="nwMaxR" type="number" value="15000"></div>
+<div><label>السرعة القياسية (م/ث)</label><input id="nwStdMV" type="number" value="0"></div>
 </div>
 <div class="row3" style="margin-top:8px">
 <div><label>مركز قوس المدفع (mil)</label><input id="nwCenterAz" type="number" value="0"></div>
@@ -187,7 +202,7 @@
 <button class="btn" id="btnAddWpn" onclick="addWeapon()">➕ إضافة</button>
 <button class="btn sec" onclick="hideWeaponForm()">✕ إلغاء</button>
 </div>
-<div class="card"><h3>البطاريات</h3><div id="batList"></div></div>
+<div class="card"><h3>البطاريات والأسلحة</h3><div id="batList"></div></div>
 </div>
 
 <div class="pg" id="pg-map">
@@ -209,7 +224,7 @@
 
 <div class="pg" id="pg-tbl">
 <div class="card">
-<h3>جداول الرمي</h3>
+<h3>جداول الرمي (البيانات القياسية)</h3>
 <label>السلاح</label><select id="tblWeapon" onchange="onTblWeaponChange()"></select>
 <label>العتاد</label><select id="tblEquip" onchange="renderTable()"></select>
 <label>الحشوة</label><select id="tblCharge" onchange="renderTable()"></select>
