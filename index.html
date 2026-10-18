@@ -224,19 +224,24 @@
 </div>
 </div>
 
+<!-- تبويب الجداول المحدث -->
 <div class="pg" id="pg-tbl">
 <div class="card">
-<h3>جداول الرمي (البيانات القياسية)</h3>
+<h3>جداول الرمي (البيانات القياسية والمتقدمة)</h3>
 <label>السلاح</label><select id="tblWeapon" onchange="onTblWeaponChange()"></select>
 <label>العتاد</label><select id="tblEquip" onchange="renderTable()"></select>
 <label>الحشوة</label>
-<div class="row">
-  <select id="tblCharge" onchange="renderTable()" style="flex:1"></select>
-  <button class="btn blue sm" style="margin:0; width:auto; padding:0 10px;" onclick="addNewCharge()">➕ حشوة</button>
+<div class="row" style="grid-template-columns: 2fr 1fr 1fr; gap: 4px;">
+  <select id="tblCharge" onchange="renderTable()"></select>
+  <button class="btn blue sm" style="margin:0;" onclick="addCharge()">➕ إضافة</button>
+  <button class="btn red sm" style="margin:0;" onclick="deleteCharge()">🗑️ حذف</button>
 </div>
-<div style="overflow-x:auto;margin-top:8px"><table class="tbl" id="tblTbl"></table></div>
+
+<div style="overflow-x:auto;margin-top:10px; border:1px solid var(--brd); border-radius:5px;">
+  <table class="tbl" id="tblTbl" style="min-width: 900px;"></table>
+</div>
 <button class="btn amber" onclick="saveTable()">💾 حفظ</button>
-<button class="btn sec sm" onclick="addRow()">➕ سطر</button>
+<button class="btn sec sm" onclick="addRow()">➕ إضافة سطر</button>
 </div>
 
 <div class="card">
@@ -254,7 +259,7 @@
 <div id="ocrProgress" style="font-size:11px;color:var(--amber);margin-top:6px"></div>
 </div>
 <div id="importPasteBox" style="display:none">
-<label>الصق نص الجدول (4 أعمدة: مدى، زاوية، زمن، انحراف)</label>
+<label>الصق نص الجدول (مدى، زاوية، زمن، انحراف - 4 أعمدة فقط)</label>
 <textarea id="pasteArea" style="min-height:120px;font-family:monospace;direction:ltr"></textarea>
 <button class="btn amber" onclick="parsePasteText()">🔍 حلّل النص</button>
 </div>
