@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "22") { localStorage.clear(); localStorage.setItem("ARTY_VER","22"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "23") { localStorage.clear(); localStorage.setItem("ARTY_VER","23"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -20,7 +20,7 @@ var $=function(id){return document.getElementById(id);};
 
 function mkCurve(rmin,rmax,eMin,eMax,tMin,tMax,dMax){var pts=[],N=6;for(var i=0;i<=N;i++){var f=i/N,r=rmin+(rmax-rmin)*f,g=Math.pow(f,2.2);pts.push({r:Math.round(r/50)*50,e:+(eMin+(eMax-eMin)*g).toFixed(1),t:+(tMin+(tMax-tMin)*Math.pow(f,1.35)).toFixed(1),d:+(dMax*Math.pow(f,1.6)).toFixed(1)});}return pts;}
 
-// تحديث هيكل البيانات ليتسع لكل أعمدة الجدول
+// تحديث هيكل البيانات ليتسع لكل أعمدة الجدول (بما فيها الأخطاء الثلاثة)
 function makePoints(arr) {
     return arr.map(function(p) {
         return {
@@ -29,23 +29,26 @@ function makePoints(arr) {
             dXH: p[8] || 0, dXT: p[9] || 0, dXe: p[10] || 0,
             dXTcb: p[11] || 0, dXq: p[12] || 0, dX: p[13] || 0,
             B: p[14] || 0, N: p[15] || 0, theta: p[16] || 0,
-            vsh: p[17] || 0, tof: p[18] || 0, Epr: p[19] || 0
+            vsh: p[17] || 0, tof: p[18] || 0, 
+            Epr: p[19] || 0, // خطأ المسافة
+            Eph: p[20] || 0, // خطأ العلو
+            Epd: p[21] || 0  // خطأ الاتجاه
         };
     });
 }
 
 var DW={
 "130":{name:"مدفع 130 ملم",max:27150,info:{caliber:"130 ملم"},charges:[
-    {n:"1",equip:"M-46",pts:makePoints([[3000, 120, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,6,0], [9000, 420, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,22,0]])},
-    {n:"2",equip:"M-46",pts:makePoints([[6000, 90, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,8,0], [15000, 400, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,32,0]])},
-    {n:"3",equip:"M-46",pts:makePoints([[10000, 70, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,11,0], [27150, 520, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,52,0]])}
+    {n:"1",equip:"M-46",pts:makePoints([[3000, 120, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,6, 35,0.1,0.1], [9000, 420, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,22, 45,0.2,0.2]])},
+    {n:"2",equip:"M-46",pts:makePoints([[6000, 90, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,8, 30,0.1,0.1], [15000, 400, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,32, 40,0.2,0.2]])},
+    {n:"3",equip:"M-46",pts:makePoints([[10000, 70, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,11, 50,0.3,0.3], [27150, 520, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,52, 60,0.4,0.4]])}
 ]},
 "122":{name:"مدفع 122 ملم (D-30)",max:15300,info:{caliber:"122 ملم"},charges:[
-    {n:"1",equip:"D-30",pts:makePoints([[1500, 110, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,4,0], [5000, 400, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,16,0]])},
-    {n:"كامل",equip:"D-30",pts:makePoints([[6000, 70, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,9,0], [15300, 470, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,42,0]])}
+    {n:"1",equip:"D-30",pts:makePoints([[1500, 110, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,4, 20,0.1,0.1], [5000, 400, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,16, 25,0.1,0.1]])},
+    {n:"كامل",equip:"D-30",pts:makePoints([[6000, 70, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,9, 30,0.2,0.2], [15300, 470, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,42, 35,0.3,0.3]])}
 ]}};
 
-var DB={version:22,pin:"1998",batteries:[],targets:[],restrictedTargets:[],weapons:JSON.parse(JSON.stringify(DW)),
+var DB={version:23,pin:"1998",batteries:[],targets:[],restrictedTargets:[],weapons:JSON.parse(JSON.stringify(DW)),
  equipTypes:["M-46", "D-30", "هاون"],
  fuzeTypes:["انفجاري", "تأخيري", "زمني"],
  milSystem: 6400,
@@ -450,7 +453,6 @@ function calcFire(){
   var baseRange=dist(w.lat,w.lon,tLat,tLon);
   var baseAzMil=toMil(bearing(w.lat,w.lon,tLat,tLon));
 
-  // 1. العثور على الحشوة والصف الأساسي بدون تصحيح أولاً
   var chIdx=$("selCharge").value,charge,point;
   if(chIdx==="auto"){
     var found=-1;
@@ -465,7 +467,6 @@ function calcFire(){
   var basePoint = interp(charge.pts, baseRange);
   if(!basePoint){alert("لا توجد بيانات في الجدول لهذا المدى");return;}
 
-  // 2. قراءة الظروف الجوية والبالستية من الواجهة
   var temp = parseFloat($("cTemp").value) || 15;
   var press = parseFloat($("cPress").value) || 750;
   var chargeTemp = parseFloat($("cChargeTemp").value) || 15;
@@ -475,39 +476,23 @@ function calcFire(){
   var weightMark = parseFloat($("cWeightMark").value) || 0;
   var heightDiff = parseFloat($("cHeightDiff").value) || 0;
 
-  // 3. حساب التصحيحات (بناءً على أعمدة الجدول)
-  // الضغط: لكل 10 ملم زئبق
   var dX_press = ((press - 750) / 10) * basePoint.dXH;
-  // حرارة الهواء: لكل 10 درجات
   var dX_temp = ((temp - 15) / 10) * basePoint.dXT;
-  // الريح الطولية: لكل 10 م/ث
   var dX_headwind = (headWind / 10) * basePoint.dXw;
-  // السرعة الابتدائية: لكل 1%
   var dX_mv = mvPct * basePoint.dXe;
-  // حرارة الحشوة: لكل 10 درجات
   var dX_chargeTemp = ((chargeTemp - 15) / 10) * basePoint.dXTcb;
-  // علامة الوزن
   var dX_weight = weightMark * basePoint.dXq;
-  // تغير الارتفاع (زاوية النظر بالمل): (فرق الارتفاع / المدى) * 1000 * معامل الجدول
   var dhMil = baseRange > 0 ? (heightDiff / baseRange) * 1000 : 0;
   var dX_height = dhMil * basePoint.dX; 
 
-  // إجمالي تصحيح المدى
   var totalRangeCorrection = dX_press + dX_temp + dX_headwind + dX_mv + dX_chargeTemp + dX_weight + dX_height;
-  
-  // المدى المصحح النهائي
   var adjustedRange = baseRange + totalRangeCorrection;
-
-  // 4. إعادة البحث في الجدول بالمدى الجديد
   var finalPoint = interp(charge.pts, adjustedRange);
   if(!finalPoint){alert("المدى المصحح خارج نطاق الجدول");return;}
 
-  // 5. حساب تصحيح الانحراف
-  // الانحراف الطبيعي (Z) + تصحيح الريح الجانبية (dZw لكل 10 م/ث)
   var windDeflCorr = (crossWind / 10) * finalPoint.dZw;
   var finalDefl = (baseAzMil + finalPoint.Z + windDeflCorr + MILS) % MILS;
 
-  // 6. بناء بطاقة النار
   var out='<div class="out"><div style="text-align:center;color:var(--acc2);font-weight:bold">🔥 بطاقة النار البالستية</div>'+
   '<div class="ln"><span>السلاح</span><span>'+w.name+'</span></div>'+
   '<div class="ln"><span>المدى الأساسي (الهندسي)</span><span>'+Math.round(baseRange)+' م</span></div>'+
@@ -522,7 +507,11 @@ function calcFire(){
   '<div class="ln"><span>مقياس السدادة الرقبية</span><span>'+finalPoint.e1_neck+'</span></div>'+
   '<div class="ln"><span>مقياس الملات</span><span>'+finalPoint.e1_fuze+'</span></div>'+
   '<div class="ln"><span>مدة الطيران</span><span>'+finalPoint.tof.toFixed(1)+' ث</span></div>'+
-  '<div class="ln"><span>الخطأ المحتمل (المدى)</span><span>'+finalPoint.Epr+' م</span></div>'+
+  
+  // الأخطاء الثلاثة
+  '<div class="ln"><span>الخطأ المحتمل (مسافة)</span><span>'+(finalPoint.Epr||0)+' م</span></div>'+
+  '<div class="ln"><span>الخطأ المحتمل (علو)</span><span>'+(finalPoint.Eph||0)+' م</span></div>'+
+  '<div class="ln"><span>الخطأ المحتمل (اتجاه)</span><span>'+(finalPoint.Epd||0)+' م</span></div>'+
   '</div>';
   
   $("fireOut").innerHTML=out;
@@ -574,6 +563,7 @@ function renderTable(){
   if(cur&&cur<w.charges.length)cs.value=cur;
   var ci=+cs.value||0,ch=w.charges[ci];if(!ch){ $("tblTbl").innerHTML=''; return;}
   
+  // إضافة الأعمدة الثلاثة للأخطاء
   var html='<tr>'+
     '<th>المسافة (R)</th>'+
     '<th>E1 (مركبة)</th><th>E1 (رقبية)</th><th>E1 (ملات)</th>'+
@@ -581,7 +571,8 @@ function renderTable(){
     '<th>dZw (ريح جانبية)</th><th>dXw (ريح طولية)</th><th>dXH (ضغط)</th><th>dXT (حرارة)</th><th>dXe+ (سرعة)</th>'+
     '<th>dXTcb (حرارة الحشوة)</th><th>dXq (وزن)</th><th>dX (ارتفاع)</th>'+
     '<th>B (حاصرة)</th><th>N (زاوية)</th><th>theta (سقوط)</th>'+
-    '<th>vsh (سرعة باقية)</th><th>TOF (طيران)</th><th>Epr (خطأ)</th>'+
+    '<th>vsh (سرعة باقية)</th><th>TOF (طيران)</th>'+
+    '<th>الخطأ بالمسافة</th><th>الخطأ بالعلو</th><th>الخطأ بالاتجاه</th>'+
     '<th></th></tr>';
     
   ch.pts.forEach(function(p,i){
@@ -605,7 +596,12 @@ function renderTable(){
     '<td><input type="number" step="0.1" value="'+(p.theta||0)+'" data-i="'+i+'" data-f="theta"></td>'+
     '<td><input type="number" value="'+(p.vsh||0)+'" data-i="'+i+'" data-f="vsh"></td>'+
     '<td><input type="number" step="0.1" value="'+(p.tof||0)+'" data-i="'+i+'" data-f="tof"></td>'+
+    
+    // حقول الأخطاء الثلاثة
     '<td><input type="number" step="0.1" value="'+(p.Epr||0)+'" data-i="'+i+'" data-f="Epr"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.Eph||0)+'" data-i="'+i+'" data-f="Eph"></td>'+
+    '<td><input type="number" step="0.1" value="'+(p.Epd||0)+'" data-i="'+i+'" data-f="Epd"></td>'+
+    
     '<td><button class="del" onclick="delRow('+i+')">✕</button></td>'+
     '</tr>';
   });
@@ -625,7 +621,7 @@ function saveTable(){
 
 function addRow(){
   var wk=$("tblWeapon").value,ci=+$("tblCharge").value;
-  DB.weapons[wk].charges[ci].pts.push({r:0,e1_comp:0,e1_neck:0,e1_fuze:0,y:0,Z:0,dZw:0,dXw:0,dXH:0,dXT:0,dXe:0,dXTcb:0,dXq:0,dX:0,B:0,N:0,theta:0,vsh:0,tof:0,Epr:0});
+  DB.weapons[wk].charges[ci].pts.push({r:0,e1_comp:0,e1_neck:0,e1_fuze:0,y:0,Z:0,dZw:0,dXw:0,dXH:0,dXT:0,dXe:0,dXTcb:0,dXq:0,dX:0,B:0,N:0,theta:0,vsh:0,tof:0, Epr:0, Eph:0, Epd:0});
   save();renderTable();
 }
 
@@ -649,7 +645,7 @@ function parseTableText(text){
     if(!nums)continue;if(nums.length<3)continue;
     var r=parseFloat(nums[0]);var e=parseFloat(nums[1]);var t=parseFloat(nums[2]);var d=nums[3]!==undefined?parseFloat(nums[3]):0;
     if(r<50||r>100000)continue;if(e<0||e>1600)continue;
-    rows.push({r:r,e1_comp:e,tof:t,Z:d}); // سيتم تجاهل باقي الحقول في الاستيراد السريع
+    rows.push({r:r,e1_comp:e,tof:t,Z:d, Epr:0, Eph:0, Epd:0}); 
   }
   if(!rows.length){alert("لم يتم العثور على بيانات صالحة");return;}
   IMPORT_ROWS=rows;showPreview();
