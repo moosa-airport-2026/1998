@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "23") { localStorage.clear(); localStorage.setItem("ARTY_VER","23"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "24") { localStorage.clear(); localStorage.setItem("ARTY_VER","24"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -20,7 +20,6 @@ var $=function(id){return document.getElementById(id);};
 
 function mkCurve(rmin,rmax,eMin,eMax,tMin,tMax,dMax){var pts=[],N=6;for(var i=0;i<=N;i++){var f=i/N,r=rmin+(rmax-rmin)*f,g=Math.pow(f,2.2);pts.push({r:Math.round(r/50)*50,e:+(eMin+(eMax-eMin)*g).toFixed(1),t:+(tMin+(tMax-tMin)*Math.pow(f,1.35)).toFixed(1),d:+(dMax*Math.pow(f,1.6)).toFixed(1)});}return pts;}
 
-// تحديث هيكل البيانات ليتسع لكل أعمدة الجدول (بما فيها الأخطاء الثلاثة)
 function makePoints(arr) {
     return arr.map(function(p) {
         return {
@@ -30,9 +29,7 @@ function makePoints(arr) {
             dXTcb: p[11] || 0, dXq: p[12] || 0, dX: p[13] || 0,
             B: p[14] || 0, N: p[15] || 0, theta: p[16] || 0,
             vsh: p[17] || 0, tof: p[18] || 0, 
-            Epr: p[19] || 0, // خطأ المسافة
-            Eph: p[20] || 0, // خطأ العلو
-            Epd: p[21] || 0  // خطأ الاتجاه
+            Epr: p[19] || 0, Eph: p[20] || 0, Epd: p[21] || 0
         };
     });
 }
@@ -48,7 +45,7 @@ var DW={
     {n:"كامل",equip:"D-30",pts:makePoints([[6000, 70, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,9, 30,0.2,0.2], [15300, 470, 0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,42, 35,0.3,0.3]])}
 ]}};
 
-var DB={version:23,pin:"1998",batteries:[],targets:[],restrictedTargets:[],weapons:JSON.parse(JSON.stringify(DW)),
+var DB={version:24,pin:"1998",batteries:[],targets:[],restrictedTargets:[],weapons:JSON.parse(JSON.stringify(DW)),
  equipTypes:["M-46", "D-30", "هاون"],
  fuzeTypes:["انفجاري", "تأخيري", "زمني"],
  milSystem: 6400,
@@ -421,6 +418,7 @@ function findBestWeapon(){
 function dist(lat1,lon1,lat2,lon2){var R=6371000,p1=lat1*D2R,p2=lat2*D2R,dp=(lat2-lat1)*D2R,dl=(lon2-lon1)*D2R;var a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));}
 function bearing(lat1,lon1,lat2,lon2){var p1=lat1*D2R,p2=lat2*D2R,dl=(lon2-lon1)*D2R;var y=Math.sin(dl)*Math.cos(p2);var x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);return (Math.atan2(y,x)*R2D+360)%360;}
 function toMil(deg){return (deg*MILS/360+MILS)%MILS;}
+
 function interp(pts,r){
   if(!pts||!pts.length)return null;
   if(r<=pts[0].r)return Object.assign({},pts[0]);
@@ -429,7 +427,7 @@ function interp(pts,r){
   for(var i=0;i<pts.length-1;i++){
     var a=pts[i],b=pts[i+1];
     if(r>=a.r&&r<=b.r){
-      var f=(r-a.r)/(b.r-a.r);
+      var f=(b.r-a.r)===0 ? 0 : (r-a.r)/(b.r-a.r); // Fix division by zero
       var res = {};
       for(var key in a) {
           if(typeof a[key] === 'number') {
@@ -444,29 +442,57 @@ function interp(pts,r){
 }
 
 function calcFire(){
+  // 1. حفظ تلقائي لبيانات الجدول (إذا كان المستخدم قد عدلها ولم يضغط حفظ)
+  try {
+    var wk=$("tblWeapon").value;
+    var ci=+$("tblCharge").value;
+    if(DB.weapons[wk] && DB.weapons[wk].charges[ci]){
+      var inputs=$("tblTbl").querySelectorAll("input");
+      if(inputs.length > 0){
+        for(var j=0;j<inputs.length;j++){
+          var inp=inputs[j];
+          DB.weapons[wk].charges[ci].pts[+inp.dataset.i][inp.dataset.f]=parseFloat(inp.value)||0;
+        }
+      }
+    }
+  } catch(e) { console.log("Auto-save skipped"); }
+
+  // 2. التحقق من المدخلات
   var bat=getCurrentBat();if(!bat){alert("اختر بطارية");return;}
   var w=getCurrentWeapon();if(!w){alert("اختر سلاح");return;}
   var wt=DB.weapons[w.type];if(!wt){alert("جداول السلاح غير موجودة");return;}
-  var ll=readMGRS('t');if(!ll){alert("أدخل MGRS");return;}
-  
+  var ll=readMGRS('t');if(!ll){alert("أدخل إحداثيات MGRS كاملة (Zone, Square, Easting, Northing)");return;}
+
+  // 3. الحسابات الأساسية
   var tLat = ll.lat, tLon = ll.lon;
   var baseRange=dist(w.lat,w.lon,tLat,tLon);
   var baseAzMil=toMil(bearing(w.lat,w.lon,tLat,tLon));
 
-  var chIdx=$("selCharge").value,charge,point;
+  // 4. اختيار الحشوة بأمان
+  var chIdx=$("selCharge").value,charge;
   if(chIdx==="auto"){
     var found=-1;
     for(var j=0;j<wt.charges.length;j++){
       var p=wt.charges[j].pts;
+      if(!p || p.length === 0) continue; // تخطي الحشوات الفارغة
       if(wt.charges[j].equip === w.equip && baseRange<=p[p.length-1].r){found=j;break;}
+    }
+    if(found===-1){
+        for(var j=0;j<wt.charges.length;j++){
+            if(wt.charges[j].pts && wt.charges[j].pts.length > 0) { found=j; break; }
+        }
     }
     if(found===-1)found=0;
     chIdx=found;
   }
   charge=wt.charges[+chIdx];
+  if(!charge) { alert("لا توجد حشوات لهذا السلاح. يرجى إضافة حشوة وتعبئتها في الجداول."); return; }
+  if(!charge.pts || charge.pts.length === 0) { alert("الحشوة المختارة لا تحتوي على أي بيانات في الجدول. يرجى تعبئتها."); return; }
+
   var basePoint = interp(charge.pts, baseRange);
   if(!basePoint){alert("لا توجد بيانات في الجدول لهذا المدى");return;}
 
+  // 5. قراءة الظروف
   var temp = parseFloat($("cTemp").value) || 15;
   var press = parseFloat($("cPress").value) || 750;
   var chargeTemp = parseFloat($("cChargeTemp").value) || 15;
@@ -476,37 +502,40 @@ function calcFire(){
   var weightMark = parseFloat($("cWeightMark").value) || 0;
   var heightDiff = parseFloat($("cHeightDiff").value) || 0;
 
-  var dX_press = ((press - 750) / 10) * basePoint.dXH;
-  var dX_temp = ((temp - 15) / 10) * basePoint.dXT;
-  var dX_headwind = (headWind / 10) * basePoint.dXw;
-  var dX_mv = mvPct * basePoint.dXe;
-  var dX_chargeTemp = ((chargeTemp - 15) / 10) * basePoint.dXTcb;
-  var dX_weight = weightMark * basePoint.dXq;
+  // 6. حساب التصحيحات
+  var dX_press = ((press - 750) / 10) * (basePoint.dXH || 0);
+  var dX_temp = ((temp - 15) / 10) * (basePoint.dXT || 0);
+  var dX_headwind = (headWind / 10) * (basePoint.dXw || 0);
+  var dX_mv = mvPct * (basePoint.dXe || 0);
+  var dX_chargeTemp = ((chargeTemp - 15) / 10) * (basePoint.dXTcb || 0);
+  var dX_weight = weightMark * (basePoint.dXq || 0);
   var dhMil = baseRange > 0 ? (heightDiff / baseRange) * 1000 : 0;
-  var dX_height = dhMil * basePoint.dX; 
+  var dX_height = dhMil * (basePoint.dX || 0); 
 
   var totalRangeCorrection = dX_press + dX_temp + dX_headwind + dX_mv + dX_chargeTemp + dX_weight + dX_height;
   var adjustedRange = baseRange + totalRangeCorrection;
+  
   var finalPoint = interp(charge.pts, adjustedRange);
   if(!finalPoint){alert("المدى المصحح خارج نطاق الجدول");return;}
 
-  var windDeflCorr = (crossWind / 10) * finalPoint.dZw;
-  var finalDefl = (baseAzMil + finalPoint.Z + windDeflCorr + MILS) % MILS;
+  var windDeflCorr = (crossWind / 10) * (finalPoint.dZw || 0);
+  var finalDefl = (baseAzMil + (finalPoint.Z || 0) + windDeflCorr + MILS) % MILS;
 
+  // 7. بناء بطاقة النار
   var out='<div class="out"><div style="text-align:center;color:var(--acc2);font-weight:bold">🔥 بطاقة النار البالستية</div>'+
   '<div class="ln"><span>السلاح</span><span>'+w.name+'</span></div>'+
   '<div class="ln"><span>المدى الأساسي (الهندسي)</span><span>'+Math.round(baseRange)+' م</span></div>'+
   '<div class="ln"><span>إجمالي تصحيح المدى</span><span class="corr">'+(totalRangeCorrection>0?'+':'')+Math.round(totalRangeCorrection)+' م</span></div>'+
   '<div class="ln"><span>المدى المصحح (للدخول بالجدول)</span><span class="amber">'+Math.round(adjustedRange)+' م</span></div>'+
   
-  '<div class="ln"><span>الزاوية (E1)</span><span class="big">'+finalPoint.e1_comp.toFixed(0)+' mil</span></div>'+
+  '<div class="ln"><span>الزاوية (E1)</span><span class="big">'+(finalPoint.e1_comp||0).toFixed(0)+' mil</span></div>'+
   '<div class="ln"><span>الانحراف النهائي</span><span class="big">'+finalDefl.toFixed(0)+' mil</span></div>'+
-  '<div class="ln"><span>الحشوة</span><span class="big">'+charge.n+'</span></div>'+
+  '<div class="ln"><span>الحشوة</span><span class="big">'+(charge.n||'-')+'</span></div>'+
   
-  '<div class="ln"><span>مقياس السدادة المركبة</span><span>'+finalPoint.e1_comp+'</span></div>'+
-  '<div class="ln"><span>مقياس السدادة الرقبية</span><span>'+finalPoint.e1_neck+'</span></div>'+
-  '<div class="ln"><span>مقياس الملات</span><span>'+finalPoint.e1_fuze+'</span></div>'+
-  '<div class="ln"><span>مدة الطيران</span><span>'+finalPoint.tof.toFixed(1)+' ث</span></div>'+
+  '<div class="ln"><span>مقياس السدادة المركبة</span><span>'+(finalPoint.e1_comp||0)+'</span></div>'+
+  '<div class="ln"><span>مقياس السدادة الرقبية</span><span>'+(finalPoint.e1_neck||0)+'</span></div>'+
+  '<div class="ln"><span>مقياس الملات</span><span>'+(finalPoint.e1_fuze||0)+'</span></div>'+
+  '<div class="ln"><span>مدة الطيران</span><span>'+(finalPoint.tof||0).toFixed(1)+' ث</span></div>'+
   
   // الأخطاء الثلاثة
   '<div class="ln"><span>الخطأ المحتمل (مسافة)</span><span>'+(finalPoint.Epr||0)+' م</span></div>'+
@@ -536,7 +565,7 @@ function addCharge() {
     renderTable();
     $("tblCharge").value = w.charges.length - 1;
     renderTable();
-    alert("✔ تم إضافة حشوة رقم " + nextNum);
+    alert("✔ تم إضافة حشوة رقم " + nextNum + ". يرجى إدخال بياناتها في الجدول.");
 }
 
 function deleteCharge() {
@@ -563,7 +592,6 @@ function renderTable(){
   if(cur&&cur<w.charges.length)cs.value=cur;
   var ci=+cs.value||0,ch=w.charges[ci];if(!ch){ $("tblTbl").innerHTML=''; return;}
   
-  // إضافة الأعمدة الثلاثة للأخطاء
   var html='<tr>'+
     '<th>المسافة (R)</th>'+
     '<th>E1 (مركبة)</th><th>E1 (رقبية)</th><th>E1 (ملات)</th>'+
