@@ -17,52 +17,48 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Handle Keystore (Generate or Decode)
-      id: keystore
-      env:
-        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-      run: |
-        if [ -z "$KEYSTORE_BASE64" ]; then
-          echo "⏳ Secret is missing. Generating a new keystore..."
-          keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key -storepass 123456 -keypass 123456 -dname "CN=ArtyApp"
-          base64 my-release-key.jks > keystore_base64.txt
-          echo "generate=true" >> $GITHUB_OUTPUT
-        else
-          echo "✅ Secret found. Decoding it..."
-          echo "$KEYSTORE_BASE64" | tr -d '\n\r ' | base64 --decode > my-release-key.jks
-          echo "generate=false" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Upload generated keystore
-      if: steps.keystore.outputs.generate == 'true'
-      uses: actions/upload-artifact@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        name: keystore-base64-file
-        path: keystore_base64.txt
+        node-version: '20'
 
-    - name: Stop if secret is missing
-      if: steps.keystore.outputs.generate == 'true'
-      run: |
-        echo "=========================================================="
-        echo "تم إنشاء المفتاح بنجاح."
-        echo "يرجى النزول لأسفل الصفحة، وتحميل الملف keystore-base64-file"
-        echo "افتح الملف، وانسخ النص بالكامل، وضعه في Secret باسم KEYSTORE_BASE64 ثم شغل البناء من جديد."
-        echo "=========================================================="
-        exit 1
+    - name: Install Cordova
+      run: npm install -g cordova
 
-    - name: Build and Sign APK
-      if: steps.keystore.outputs.generate == 'false'
+    - name: Create Cordova Project and Copy Files
       run: |
-        chmod +x gradlew
-        ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=$(pwd)/my-release-key.jks \
-          -Pandroid.injected.signing.store.password=123456 \
-          -Pandroid.injected.signing.key.alias=my-key \
-          -Pandroid.injected.signing.key.password=123456
+        cordova create cordova-app com.moosa.arty ArtyApp
+        cd cordova-app
+        cordova platform add android
+        rm -rf www/*
+        cp ../index.html www/
+        cp ../app.js www/
+        cp ../style.css www/
+        cp ../icon.png www/
+
+    - name: Setup Keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my-release-key.jks
+        cat <<EOF > cordova-app/build.json
+        {
+          "android": {
+            "release": {
+              "keystore": "../my-release-key.jks",
+              "storePassword": "123456",
+              "alias": "my-key",
+              "password": "123456"
+            }
+          }
+        }
+        EOF
+
+    - name: Build APK
+      run: |
+        cd cordova-app
+        cordova build android --release --buildConfig build.json
 
     - name: Upload APK
-      if: steps.keystore.outputs.generate == 'false'
       uses: actions/upload-artifact@v4
       with:
         name: app-release-signed
-        path: app/build/outputs/apk/release/app-release.apk
+        path: cordova-app/platforms/android/app/build/outputs/apk/release/app-release.apk
