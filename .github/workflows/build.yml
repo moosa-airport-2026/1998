@@ -12,27 +12,14 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Generate Keystore (If not exists)
-      id: gen_keystore
+    - name: Decode Keystore
       run: |
-        if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-          echo "⏳ لم يتم العثور على مفتاح. جاري إنشاء مفتاح جديد..."
-          keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key -storepass 123456 -keypass 123456 -dname "CN=ArtyApp"
-          base64 my-release-key.jks > keystore_base64.txt
-          echo "================= انسخ النص التالي وضعه في إعدادات GitHub ================="
-          cat keystore_base64.txt
-          echo "========================================================================"
-          echo "خطأ: يرجى نسخ النص أعلاه وإضافته في Secrets باسم KEYSTORE_BASE64 ثم إعادة البناء."
-          exit 1
-        else
-          echo "✅ تم العثور على المفتاح. جاري فك التشفير..."
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my-release-key.jks
-        fi
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my-release-key.jks
 
     - name: Build and Sign APK
       run: |
