@@ -61,4 +61,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-release-signed
-        path: cordova-app/platforms/android/app/build/outputs/apk/release/*.apk
+        # هذا المسار سيبحث في كل المجلدات الفرعية عن أي ملف ينتهي بـ apk
+        path: cordova-app/platforms/android/app/build/outputs/apk/**/*.apk
