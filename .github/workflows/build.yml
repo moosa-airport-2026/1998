@@ -1,84 +1,50 @@
 name: Build APK
-
 on:
   push:
-    branches: [ main ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      
-      - name: Install Cordova
-        run: npm install -g cordova
-      
-      - name: Build App
-        run: |
-          cordova create app com.arty.app Nasrallah
-          
-          # نسخ الملفات المنفصلة إلى داخل التطبيق
-          cp index.html app/www/index.html
-          cp style.css app/www/style.css
-          cp app.js app/www/app.js
-          
-          ICON=$(ls | grep -i "^icon" | head -1)
-          if [ -n "$ICON" ]; then
-            cp "$ICON" app/www/icon.png
-            cp "$ICON" app/icon.png
-          fi
-          
-          cd app
-          rm -f www/css/index.css www/js/index.js
-          
-          cat > config.xml << 'XMLEOF'
-          <?xml version='1.0' encoding='utf-8'?>
-          <widget id="com.arty.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-            <name>نصر الله</name>
-            <content src="index.html" />
-            <preference name="Orientation" value="portrait" />
-            <preference name="BackgroundColor" value="#0f1a12" />
-            <preference name="AndroidWindowSplashScreenBackground" value="#0f1a12" />
-            <preference name="AndroidInsecureFileModeEnabled" value="true" />
-            <preference name="AndroidNetworkAllowed" value="true" />
-            <access origin="*" />
-            <allow-navigation href="*" />
-            <allow-intent href="http://*/*" />
-            <allow-intent href="https://*/*" />
-            <platform name="android">
-              <preference name="android-minSdkVersion" value="22" />
-              <preference name="android-targetSdkVersion" value="34" />
-              <icon density="ldpi" src="icon.png" />
-              <icon density="mdpi" src="icon.png" />
-              <icon density="hdpi" src="icon.png" />
-              <icon density="xhdpi" src="icon.png" />
-              <icon density="xxhdpi" src="icon.png" />
-              <icon density="xxxhdpi" src="icon.png" />
-            </platform>
-          </widget>
-          XMLEOF
-          
-          cordova platform add android
-          
-          MANIFEST="platforms/android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST" ]; then
-            sed -i 's/<application /<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <application android:usesCleartextTraffic="true" /' "$MANIFEST"
-          fi
-          
-          cordova build android
-      
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: arty-apk
-          path: app/platforms/android/app/build/outputs/apk/debug/*.apk
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Generate Keystore (If not exists)
+      id: gen_keystore
+      run: |
+        if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+          echo "⏳ لم يتم العثور على مفتاح. جاري إنشاء مفتاح جديد..."
+          keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key -storepass 123456 -keypass 123456 -dname "CN=ArtyApp"
+          base64 my-release-key.jks > keystore_base64.txt
+          echo "================= انسخ النص التالي وضعه في إعدادات GitHub ================="
+          cat keystore_base64.txt
+          echo "========================================================================"
+          echo "خطأ: يرجى نسخ النص أعلاه وإضافته في Secrets باسم KEYSTORE_BASE64 ثم إعادة البناء."
+          exit 1
+        else
+          echo "✅ تم العثور على المفتاح. جاري فك التشفير..."
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my-release-key.jks
+        fi
+
+    - name: Build and Sign APK
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=$(pwd)/my-release-key.jks \
+          -Pandroid.injected.signing.store.password=123456 \
+          -Pandroid.injected.signing.key.alias=my-key \
+          -Pandroid.injected.signing.key.password=123456
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-release-signed
+        path: app/build/outputs/apk/release/app-release.apk
