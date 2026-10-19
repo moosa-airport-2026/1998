@@ -427,7 +427,7 @@ function interp(pts,r){
   for(var i=0;i<pts.length-1;i++){
     var a=pts[i],b=pts[i+1];
     if(r>=a.r&&r<=b.r){
-      var f=(b.r-a.r)===0 ? 0 : (r-a.r)/(b.r-a.r); // Fix division by zero
+      var f=(b.r-a.r)===0 ? 0 : (r-a.r)/(b.r-a.r);
       var res = {};
       for(var key in a) {
           if(typeof a[key] === 'number') {
@@ -442,7 +442,7 @@ function interp(pts,r){
 }
 
 function calcFire(){
-  // 1. حفظ تلقائي لبيانات الجدول (إذا كان المستخدم قد عدلها ولم يضغط حفظ)
+  // 1. حفظ تلقائي لبيانات الجدول
   try {
     var wk=$("tblWeapon").value;
     var ci=+$("tblCharge").value;
@@ -486,6 +486,7 @@ function calcFire(){
     chIdx=found;
   }
   charge=wt.charges[+chIdx];
+  
   if(!charge) { alert("لا توجد حشوات لهذا السلاح. يرجى إضافة حشوة وتعبئتها في الجداول."); return; }
   if(!charge.pts || charge.pts.length === 0) { alert("الحشوة المختارة لا تحتوي على أي بيانات في الجدول. يرجى تعبئتها."); return; }
 
@@ -521,6 +522,19 @@ function calcFire(){
   var windDeflCorr = (crossWind / 10) * (finalPoint.dZw || 0);
   var finalDefl = (baseAzMil + (finalPoint.Z || 0) + windDeflCorr + MILS) % MILS;
 
+  // [تعديل 2]: حساب الانحراف داخل التنشير والزاوية المثالية
+  var aimPost = w.shakhes || 6000; 
+  var diff = finalDefl - aimPost;
+  if (diff > MILS/2) diff -= MILS;
+  if (diff < -MILS/2) diff += MILS;
+  
+  var isRight = diff >= 0;
+  var isWithinLimit = false;
+  if (isRight && diff <= w.limitR) isWithinLimit = true;
+  if (!isRight && Math.abs(diff) <= w.limitL) isWithinLimit = true;
+
+  var isOptimalElev = (finalPoint.e1_comp >= 350 && finalPoint.e1_comp <= 550);
+
   // 7. بناء بطاقة النار
   var out='<div class="out"><div style="text-align:center;color:var(--acc2);font-weight:bold">🔥 بطاقة النار البالستية</div>'+
   '<div class="ln"><span>السلاح</span><span>'+w.name+'</span></div>'+
@@ -528,20 +542,31 @@ function calcFire(){
   '<div class="ln"><span>إجمالي تصحيح المدى</span><span class="corr">'+(totalRangeCorrection>0?'+':'')+Math.round(totalRangeCorrection)+' م</span></div>'+
   '<div class="ln"><span>المدى المصحح (للدخول بالجدول)</span><span class="amber">'+Math.round(adjustedRange)+' م</span></div>'+
   
-  '<div class="ln"><span>الزاوية (E1)</span><span class="big">'+(finalPoint.e1_comp||0).toFixed(0)+' mil</span></div>'+
-  '<div class="ln"><span>الانحراف النهائي</span><span class="big">'+finalDefl.toFixed(0)+' mil</span></div>'+
-  '<div class="ln"><span>الحشوة</span><span class="big">'+(charge.n||'-')+'</span></div>'+
+  // [تعديل 3]: عرض الزاوية والانحراف مع التنبيهات
+  '<div class="ln"><span>الزاوية (E1)</span><span class="big '+(isOptimalElev?'':'corr')+'">'+(finalPoint.e1_comp||0).toFixed(0)+' mil</span>'+(isOptimalElev?'':' <span style="font-size:10px;color:var(--red)">(خارج المثالي)</span>')+'</div>'+
+  '<div class="ln"><span>الانحراف النهائي</span><span class="big '+(isWithinLimit?'':'corr')+'">'+finalDefl.toFixed(0)+' mil</span>'+(isWithinLimit?'':' <span style="font-size:10px;color:var(--red)">(خارج التنشير)</span>')+'</div>'+
   
+  '<div class="ln"><span>الحشوة</span><span class="big">'+(charge.n||'-')+'</span></div>'+
   '<div class="ln"><span>مقياس السدادة المركبة</span><span>'+(finalPoint.e1_comp||0)+'</span></div>'+
   '<div class="ln"><span>مقياس السدادة الرقبية</span><span>'+(finalPoint.e1_neck||0)+'</span></div>'+
   '<div class="ln"><span>مقياس الملات</span><span>'+(finalPoint.e1_fuze||0)+'</span></div>'+
-  '<div class="ln"><span>مدة الطيران</span><span>'+(finalPoint.tof||0).toFixed(1)+' ث</span></div>'+
-  
-  // الأخطاء الثلاثة
-  '<div class="ln"><span>الخطأ المحتمل (مسافة)</span><span>'+(finalPoint.Epr||0)+' م</span></div>'+
-  '<div class="ln"><span>الخطأ المحتمل (علو)</span><span>'+(finalPoint.Eph||0)+' م</span></div>'+
-  '<div class="ln"><span>الخطأ المحتمل (اتجاه)</span><span>'+(finalPoint.Epd||0)+' م</span></div>'+
-  '</div>';
+  '<div class="ln"><span>مدة الطيران</span><span>'+(finalPoint.tof||0).toFixed(1)+' ث</span></div>';
+
+  // [تعديل 3]: عرض المتغيرات الجوية فقط التي تغيرت
+  var correctionsHtml = '';
+  if (Math.abs(dX_press) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح الضغط</span><span class="corr">'+(dX_press>0?'+':'')+dX_press.toFixed(1)+'</span></div>';
+  if (Math.abs(dX_temp) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح حرارة الهواء</span><span class="corr">'+(dX_temp>0?'+':'')+dX_temp.toFixed(1)+'</span></div>';
+  if (Math.abs(dX_headwind) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح الريح الطولية</span><span class="corr">'+(dX_headwind>0?'+':'')+dX_headwind.toFixed(1)+'</span></div>';
+  if (Math.abs(dX_mv) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح السرعة</span><span class="corr">'+(dX_mv>0?'+':'')+dX_mv.toFixed(1)+'</span></div>';
+  if (Math.abs(dX_chargeTemp) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح حرارة الحشوة</span><span class="corr">'+(dX_chargeTemp>0?'+':'')+dX_chargeTemp.toFixed(1)+'</span></div>';
+  if (Math.abs(dX_weight) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح الوزن</span><span class="corr">'+(dX_weight>0?'+':'')+dX_weight.toFixed(1)+'</span></div>';
+  if (Math.abs(dX_height) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح الارتفاع</span><span class="corr">'+(dX_height>0?'+':'')+dX_height.toFixed(1)+'</span></div>';
+
+  if (correctionsHtml !== '') {
+      out += '<div style="margin-top:5px; border-top:1px dashed var(--brd); padding-top:5px; font-size:11px; color:var(--dim);">التصحيحات المتغيرة:</div>' + correctionsHtml;
+  }
+
+  out += '</div>';
   
   $("fireOut").innerHTML=out;
 }
@@ -625,7 +650,6 @@ function renderTable(){
     '<td><input type="number" value="'+(p.vsh||0)+'" data-i="'+i+'" data-f="vsh"></td>'+
     '<td><input type="number" step="0.1" value="'+(p.tof||0)+'" data-i="'+i+'" data-f="tof"></td>'+
     
-    // حقول الأخطاء الثلاثة
     '<td><input type="number" step="0.1" value="'+(p.Epr||0)+'" data-i="'+i+'" data-f="Epr"></td>'+
     '<td><input type="number" step="0.1" value="'+(p.Eph||0)+'" data-i="'+i+'" data-f="Eph"></td>'+
     '<td><input type="number" step="0.1" value="'+(p.Epd||0)+'" data-i="'+i+'" data-f="Epd"></td>'+
