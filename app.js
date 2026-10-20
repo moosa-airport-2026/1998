@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "27") { localStorage.clear(); localStorage.setItem("ARTY_VER","27"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "28") { localStorage.clear(); localStorage.setItem("ARTY_VER","28"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -423,55 +423,40 @@ function onWeaponChange(){
 // دالة لتحديث القيم الافتراضية لبطاقة التوجيه
 function updateAimDefaults() {
     var w = getCurrentWeapon();
-    if (w && $("apCenterAz") && $("apShakhes")) {
-        $("apCenterAz").value = w.centerAz;
-        $("apShakhes").value = w.shakhes || 0;
+    if (w && $("apGunAz") && $("apShakhes")) {
+        $("apGunAz").value = w.centerAz;
+        $("apShakhes").value = w.shakhes || 6000;
     }
 }
 
-// [الميزة الجديدة]: حساب قراءة الموجه لتوجيه المدفع
+// [الميزة الجديدة]: حساب قراءة الموجه بالطريقة الميدانية (الانحراف النسبي)
 function calcAimPoint() {
-    var w = getCurrentWeapon();
-    if (!w) { alert("يجب اختيار بطارية وسلاح أولاً من تبويب (نار)"); return; }
+    var gunAz = parseFloat($("apGunAz").value);
+    var targetAz = parseFloat($("apTargetAz").value);
+    var baseSight = parseFloat($("apShakhes").value);
     
-    var z = $("apZone").value.trim().toUpperCase();
-    var s = $("apSq").value.trim().toUpperCase();
-    var e = $("apE").value.trim();
-    var n = $("apN").value.trim();
-    
-    if (!z || !s || !e || !n || e.length !== 5 || n.length !== 5) {
-        alert("أدخل إحداثيات نقطة التصويب كاملة (MGRS)");
+    if (isNaN(gunAz) || isNaN(targetAz)) {
+        alert("يرجى إدخال اتجاه المدفع الحالي واتجاه الهدف المطلوب");
         return;
     }
+    if (isNaN(baseSight)) baseSight = 6000;
+
+    // المعادلة: القراءة المطلوبة = الشاخص + (اتجاه الهدف - اتجاه المدفع)
+    var diff = targetAz - gunAz;
+    var sightReading = (baseSight + diff) % MILS;
     
-    var centerAz = parseFloat($("apCenterAz").value);
-    if (isNaN(centerAz)) centerAz = w.centerAz;
+    // معالجة القيم السالبة أو التي تتجاوز النظام
+    if (sightReading < 0) sightReading += MILS;
+    if (sightReading >= MILS) sightReading -= MILS;
+
+    var out = '<div style="font-size:16px;">القراءة المطلوبة على الموجه: <br><span class="big" style="color:var(--acc2); font-size:24px;">' + sightReading.toFixed(0) + ' mil</span></div>' +
+              '<div style="font-size:12px;color:var(--dim);margin-top:5px; border-top:1px dashed var(--brd); padding-top:5px;">' +
+              'الفرق (الانحراف): ' + (diff > 0 ? '+' : '') + diff + ' mil<br>' +
+              'اتجاه المدفع: ' + gunAz + ' | اتجاه الهدف: ' + targetAz + '<br>' +
+              'قراءة الشاخص الأساسية: ' + baseSight +
+              '</div>';
     
-    var shakhes = parseFloat($("apShakhes").value);
-    if (isNaN(shakhes)) shakhes = w.shakhes || 0;
-    
-    try {
-        var apLatLon = MGRS.inverse(z + s + e + n);
-        
-        var azToAp = toMil(bearing(w.lat, w.lon, apLatLon.lat, apLatLon.lon));
-        var distToAp = dist(w.lat, w.lon, apLatLon.lat, apLatLon.lon);
-        
-        var diff = azToAp - centerAz;
-        if (diff < 0) diff += MILS;
-        
-        var sightReading = (shakhes + diff) % MILS;
-        
-        var out = '<div style="font-size:16px;">القراءة المطلوبة على الموجه: <br><span class="big" style="color:var(--acc2); font-size:24px;">' + sightReading.toFixed(0) + ' mil</span></div>' +
-                  '<div style="font-size:12px;color:var(--dim);margin-top:5px; border-top:1px dashed var(--brd); padding-top:5px;">' +
-                  'اتجاه نقطة التصويب (من المدفع): ' + azToAp.toFixed(0) + ' mil<br>' +
-                  'المسافة إلى نقطة التصويب: ' + Math.round(distToAp) + ' م<br>' +
-                  'مركز القوس المستخدم: ' + centerAz + ' mil | الشاخص: ' + shakhes +
-                  '</div>';
-        
-        $("aimPointOut").innerHTML = out;
-    } catch (err) {
-        alert("إحداثيات MGRS غير صالحة");
-    }
+    $("aimPointOut").innerHTML = out;
 }
 
 function findBestWeapon(){
