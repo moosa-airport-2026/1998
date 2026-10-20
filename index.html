@@ -28,7 +28,8 @@
 </div>
 
 <div id="app" style="display:none">
-<div class="hdr"><h1>🎯 نظام نيران المدفعية الميدانية</h1></div>
+<!-- إضافة حدث الضغط السري على العنوان -->
+<div class="hdr" onclick="handleSecretClick()"><h1>🎯 نظام نيران المدفعية الميدانية</h1></div>
 
 <div class="pg on" id="pg-fire">
 <div class="card"><h3>1️⃣ البطارية والسلاح</h3>
@@ -50,6 +51,21 @@
 </div>
 <label>ارتفاع الهدف (م)</label><input id="tAlt" type="number" value="0">
 </div>
+
+<!-- بطاقة حساب اتجاه نقطة التصويب -->
+<div class="card"><h3>📍 حساب اتجاه التنصيب (نقطة التصويب)</h3>
+<div class="mgbox">
+<label>الشرقي (Easting)</label><input id="apE" inputmode="numeric" maxlength="5" placeholder="12345">
+<label>الشمالي (Northing)</label><input id="apN" inputmode="numeric" maxlength="5" placeholder="67890">
+<div class="mgrow">
+<div><label>Zone</label><input id="apZone" maxlength="3" placeholder="38S"></div>
+<div><label>Square</label><input id="apSq" maxlength="2" placeholder="MB"></div>
+</div>
+</div>
+<button class="btn blue" onclick="calcAimPoint()">🎯 احسب اتجاه نقطة التصويب</button>
+<div id="aimPointOut" style="margin-top:10px; font-weight:bold; color:var(--amber); text-align:center;"></div>
+</div>
+
 <div class="card"><h3>🔍 اختيار السلاح التلقائي</h3>
 <button class="btn blue" onclick="findBestWeapon()">🤖 حدد أفضل سلاح</button>
 <div id="candidatesList" style="margin-top:8px"></div>
@@ -69,10 +85,7 @@
 <div><label>فرق السرعة الابتدائية (%)</label><input id="cMVPercent" type="number" step="0.1" value="0"></div>
 <div><label>علامة وزن القذيفة</label><input id="cWeightMark" type="number" value="0"></div>
 </div>
-<div class="row">
-<div><label>فرق الارتفاع (م)</label><input id="cHeightDiff" type="number" value="0"></div>
-<div><label>---</label></div>
-</div>
+<!-- تم حذف حقل فرق الارتفاع من هنا -->
 </div>
 
 <button class="btn" onclick="calcFire()">🔥 احسب بطاقة النار</button>
@@ -272,8 +285,10 @@
 <button class="btn sec sm" onclick="importData()">📥 استيراد</button>
 <button class="btn red sm" onclick="resetAll()">🗑️ تصفير</button>
 </div>
-<div class="card">
-<h3>الأمان</h3>
+
+<!-- تم إخفاء قسم الأمان هنا -->
+<div class="card" id="secretPinCard" style="display:none;">
+<h3>🔒 الأمان (سري)</h3>
 <label>تغيير رمز الدخول</label>
 <input id="newPin" type="password" inputmode="numeric" maxlength="6">
 <button class="btn amber sm" onclick="changePin()">تغيير</button>
@@ -319,6 +334,6 @@
 <input type="file" id="fileIn" accept=".json" style="display:none">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="app.js?v=3"></script> 
+<script src="app.js"></script>
 </body>
 </html>
