@@ -44,7 +44,10 @@ jobs:
         # 3. تغيير الاسم إلى "نصر الله ١"
         node -e "const fs=require('fs'); let c=fs.readFileSync('config.xml','utf8'); c=c.replace(/<name>.*?<\/name>/, '<name>نصر الله ١</name>'); fs.writeFileSync('config.xml', c);"
         
-        # 4. توليد الأيقونات باستخدام ImageMagick
+        # 4. حذف الأيقونات التكيفية القديمة (التي تسبب مشكلة الروبوت)
+        rm -rf platforms/android/app/src/main/res/mipmap-anydpi-v26
+        
+        # 5. وضع صورتك في جميع المجلدات
         RES="platforms/android/app/src/main/res"
         if [ -f ../icon.png ]; then
           echo "Applying custom icon..."
@@ -53,6 +56,8 @@ jobs:
           convert ../icon.png -resize 96x96! $RES/mipmap-xhdpi/ic_launcher.png
           convert ../icon.png -resize 144x144! $RES/mipmap-xxhdpi/ic_launcher.png
           convert ../icon.png -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher.png
+          # وضعها كأيقونة مستديرة أيضاً
+          convert ../icon.png -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher_round.png
         fi
         
         cordova prepare android
