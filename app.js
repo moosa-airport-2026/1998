@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "25") { localStorage.clear(); localStorage.setItem("ARTY_VER","25"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "26") { localStorage.clear(); localStorage.setItem("ARTY_VER","26"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -99,7 +99,33 @@ function batChanged(){updateHint('nb');}
 function doLogin(){var v=$("pinIn").value.trim();if(v===DB.pin){$("login").style.display="none";showSplash();}else{$("pinErr").textContent="✗ رمز خاطئ";$("pinIn").value="";}}
 function showSplash(){var sp=$("splash");sp.style.display="flex";setTimeout(function(){sp.style.opacity="1";},50);setTimeout(function(){sp.style.opacity="0";setTimeout(function(){sp.style.display="none";$("app").style.display="block";boot();},800);},5000);}
 $("pinIn").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
-function changePin(){var v=$("newPin").value.trim();if(v.length<4){alert("4 أرقام على الأقل");return;}DB.pin=v;save();$("newPin").value="";alert("✔ تم");}
+function changePin(){var v=$("newPin").value.trim();if(v.length<4){alert("4 أرقام على الأقل");return;}DB.pin=v;save();$("newPin").value="";alert("✔ تم تغيير الرمز");}
+
+// نظام الضغط السري لفتح قسم الأمان
+var secretClickCount = 0;
+var secretClickTimer = null;
+function handleSecretClick() {
+    secretClickCount++;
+    if (secretClickCount === 1) {
+        secretClickTimer = setTimeout(function() { secretClickCount = 0; }, 2000);
+    }
+    if (secretClickCount >= 5) {
+        clearTimeout(secretClickTimer);
+        secretClickCount = 0;
+        var currentPin = prompt("أدخل الرمز الحالي لتأكيد الهوية:");
+        if (currentPin === DB.pin) {
+            var secretCard = $("secretPinCard");
+            if (secretCard.style.display === "none") {
+                secretCard.style.display = "block";
+                alert("تم فتح قسم تغيير الرمز. يرجى التمرير للأسفل.");
+            } else {
+                secretCard.style.display = "none";
+            }
+        } else if (currentPin !== null) {
+            alert("رمز خاطئ!");
+        }
+    }
+}
 
 function tab(id,el){
   var pgs=document.querySelectorAll(".pg");for(var i=0;i<pgs.length;i++)pgs[i].classList.remove("on");$("pg-"+id).classList.add("on");
@@ -392,6 +418,47 @@ function onWeaponChange(){
   refreshMapMarkers();
 }
 
+// [تعديل 3]: دالة حساب نقطة التصويب
+function calcAimPoint() {
+    var w = getCurrentWeapon();
+    if (!w) { alert("اختر سلاح أولاً"); return; }
+    
+    var z = $("apZone").value.trim().toUpperCase();
+    var s = $("apSq").value.trim().toUpperCase();
+    var e = $("apE").value.trim();
+    var n = $("apN").value.trim();
+    
+    if (!z || !s || !e || !n || e.length !== 5 || n.length !== 5) {
+        alert("أدخل إحداثيات نقطة التصويب كاملة (MGRS)");
+        return;
+    }
+    
+    try {
+        var apLatLon = MGRS.inverse(z + s + e + n);
+        var az = toMil(bearing(w.lat, w.lon, apLatLon.lat, apLatLon.lon));
+        var distToAp = dist(w.lat, w.lon, apLatLon.lat, apLatLon.lon);
+        
+        var out = '<div>اتجاه نقطة التصويب (من المدفع): <span class="big" style="color:var(--acc2)">' + az.toFixed(0) + ' mil</span></div>' +
+                  '<div style="font-size:12px;color:var(--dim);margin-top:5px">المسافة إلى نقطة التصويب: ' + Math.round(distToAp) + ' م</div>';
+        
+        // التحقق من وجود النقطة داخل قوس المدفع
+        var relAz = (az - w.centerAz + MILS) % MILS;
+        var isRight = relAz <= MILS/2;
+        var deviation = isRight ? relAz : MILS - relAz;
+        var limit = isRight ? w.limitR : w.limitL;
+        
+        if (deviation > limit) {
+            out += '<div style="color:var(--red);font-size:12px;margin-top:5px">⚠️ نقطة التصويب خارج قوس المدفع (مركز القوس: '+w.centerAz+')</div>';
+        } else {
+            out += '<div style="color:var(--green);font-size:12px;margin-top:5px">✓ نقطة التصويب داخل قوس المدفع</div>';
+        }
+        
+        $("aimPointOut").innerHTML = out;
+    } catch (err) {
+        alert("إحداثيات MGRS غير صالحة");
+    }
+}
+
 function findBestWeapon(){
   var ll=readMGRS('t');if(!ll){alert("أدخل إحداثيات الهدف");return;}
   var tLat=ll.lat,tLon=ll.lon; var b=getCurrentBat();if(!b){alert("اختر بطارية");return;}
@@ -503,7 +570,11 @@ function calcFire(){
     var crossWind = parseFloat($("cCrossWind").value) || 0;
     var mvPct = parseFloat($("cMVPercent").value) || 0;
     var weightMark = parseFloat($("cWeightMark").value) || 0;
-    var heightDiff = parseFloat($("cHeightDiff").value) || 0;
+    
+    // [تعديل 1]: حساب فرق الارتفاع تلقائياً
+    var tAlt = parseFloat($("tAlt").value) || 0; 
+    var wAlt = w.alt || 0;
+    var heightDiff = tAlt - wAlt;
 
     var dX_press = ((press - 750) / 10) * (basePoint.dXH || 0);
     var dX_temp = ((temp - 15) / 10) * (basePoint.dXT || 0);
@@ -557,7 +628,7 @@ function calcFire(){
     if (Math.abs(dX_mv) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح السرعة</span><span class="corr">'+(dX_mv>0?'+':'')+dX_mv.toFixed(1)+'</span></div>';
     if (Math.abs(dX_chargeTemp) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح حرارة الحشوة</span><span class="corr">'+(dX_chargeTemp>0?'+':'')+dX_chargeTemp.toFixed(1)+'</span></div>';
     if (Math.abs(dX_weight) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح الوزن</span><span class="corr">'+(dX_weight>0?'+':'')+dX_weight.toFixed(1)+'</span></div>';
-    if (Math.abs(dX_height) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح الارتفاع</span><span class="corr">'+(dX_height>0?'+':'')+dX_height.toFixed(1)+'</span></div>';
+    if (Math.abs(dX_height) > 0.01) correctionsHtml += '<div class="ln"><span>تصحيح الارتفاع (تلقائي)</span><span class="corr">'+(dX_height>0?'+':'')+dX_height.toFixed(1)+'</span></div>';
 
     if (correctionsHtml !== '') {
         out += '<div style="margin-top:5px; border-top:1px dashed var(--brd); padding-top:5px; font-size:11px; color:var(--dim);">التصحيحات المتغيرة:</div>' + correctionsHtml;
