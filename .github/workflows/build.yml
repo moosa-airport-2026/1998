@@ -27,29 +27,24 @@ jobs:
 
     - name: Create Project and Setup Icon
       run: |
-        # 1. نستخدم اسم إنجليزي لتجنب مشاكل الترميز، وسنغيره لاحقاً
-        cordova create cordova-app com.moosa.arty "Nasrallah"
+        # إنشاء المشروع بالاسم المطلوب
+        cordova create cordova-app com.moosa.arty "نصر الله ١"
         cd cordova-app
         cordova platform add android
         
-        # 2. نسخ ملفات الويب
+        # نسخ ملفات الويب
         rm -rf www/*
         cp ../index.html www/
         cp ../app.js www/
         cp ../style.css www/
         
-        # 3. تجهيز الأيقونة الخاصة بك
+        # تجهيز الأيقونة وشاشة البداية من صورتك
         mkdir -p resources
         cp ../icon.png resources/icon.png
-        # نستخدم نفس الصورة كشاشة بداية لكي لا يفشل البناء
         cp ../icon.png resources/splash.png
         
-        # 4. توليد الأيقونات
+        # توليد الأيقونات تلقائياً
         cordova-res android --skip-config --copy
-        
-        # 5. تغيير اسم التطبيق المكتوب على الهاتف إلى "نصر الله ١"
-        sed -i 's/<name>Nasrallah<\/name>/<name>نصر الله ١<\/name>/g' config.xml
-        sed -i 's/<name>Nasrallah<\/name>/<name>نصر الله ١<\/name>/g' platforms/android/app/src/main/res/values/strings.xml
 
     - name: Setup Keystore
       run: |
