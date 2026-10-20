@@ -57,9 +57,9 @@ jobs:
         cd cordova-app
         cordova build android --release --buildConfig build.json
 
-    - name: Upload APK
+    - name: Upload APK Folder
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-signed
-        # هذا المسار هو المكان الذي تضع فيه Cordova ملفات الـ APK
-        path: cordova-app/platforms/android/app/build/outputs/apk/**/*.apk
+        name: app-release-files
+        # هنا نطلب منه رفع المجلد بالكامل بدلاً من ملف محدد
+        path: cordova-app/platforms/android/app/build/outputs/apk/release/
