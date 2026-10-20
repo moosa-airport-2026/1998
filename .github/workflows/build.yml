@@ -22,27 +22,31 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install Cordova
-      run: npm install -g cordova
+    - name: Install Cordova and ImageMagick
+      run: |
+        npm install -g cordova cordova-res
+        sudo apt-get update && sudo apt-get install -y imagemagick
 
     - name: Create Cordova Project and Copy Files
       run: |
-        # 1. اسم التطبيق هنا
-        cordova create cordova-app com.moosa.arty "نصر الله ١"
+        # هنا الاسم (نصر الله) بدون رقم 1
+        cordova create cordova-app com.moosa.arty "نصر الله"
         cd cordova-app
         cordova platform add android
         rm -rf www/*
         cp ../index.html www/
         cp ../app.js www/
         cp ../style.css www/
-        cp ../icon.png www/
         
-        # 2. تجهيز الأيقونة فقط (تجاهل شاشة البداية)
+        # تجهيز الأيقونة وشاشة البداية
         mkdir -p resources
-        cp ../icon.png resources/icon.png
-        npm install -g cordova-res
-        # أضفنا --type icon لتجاهل طلب صورة شاشة البداية
-        cordova-res android --skip-config --copy --type icon
+        # تحويل الصورة إلى PNG حقيقية بمقاس 1024
+        convert ../icon.png -resize 1024x1024! resources/icon.png
+        # إنشاء شاشة بداية بيضاء وهمية لكي لا تفشل الأداة
+        convert -size 2732x2732 xc:white resources/splash.png
+        
+        # توليد الأيقونات
+        cordova-res android --skip-config --copy
 
     - name: Setup Keystore
       run: |
