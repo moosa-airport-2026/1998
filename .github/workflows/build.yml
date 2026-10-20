@@ -22,9 +22,9 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install Cordova and Tools
+    - name: Install Cordova and ImageMagick
       run: |
-        npm install -g cordova cordova-res
+        npm install -g cordova
         sudo apt-get update
         sudo apt-get install -y imagemagick
 
@@ -33,7 +33,6 @@ jobs:
         # 1. إنشاء المشروع
         cordova create cordova-app com.moosa.arty ArtyApp
         cd cordova-app
-        cordova platform add android
         
         # 2. نسخ ملفات الويب
         rm -rf www/*
@@ -41,13 +40,11 @@ jobs:
         cp ../app.js www/
         cp ../style.css www/
         
-        # 3. تجهيز الصورة وتكبيرها لتناسب شاشة البداية
+        # 3. تجهيز الأيقونة (تحويلها إلى PNG حقيقية بمقاس 1024)
         mkdir -p resources
-        cp ../icon.png resources/icon.png
-        # هنا نقوم بتكبير الصورة إلى 1920x1920 لتلبية متطلبات شاشة البداية
-        convert ../icon.png -resize 1920x1920! resources/splash.png
+        convert ../icon.png -resize 1024x1024! resources/icon.png
         
-        # 4. تعديل ملف config.xml برمجياً لإضافة الأيقونة والاسم
+        # 4. تعديل ملف config.xml ليشير إلى الأيقونة والاسم
         node -e "
           const fs = require('fs');
           let c = fs.readFileSync('config.xml', 'utf8');
@@ -57,8 +54,8 @@ jobs:
           fs.writeFileSync('config.xml', c);
         "
         
-        # 5. توليد الأيقونات (هذه المرة ستنجح لأن الصورة بالحجم المطلوب)
-        cordova-res android --skip-config --copy
+        # 5. إضافة منصة الأندرويد (ستقوم بقراءة الأيقونة من config.xml تلقائياً)
+        cordova platform add android
 
     - name: Setup Keystore
       run: |
