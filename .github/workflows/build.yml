@@ -22,29 +22,35 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install Cordova and Tools
+    - name: Install Cordova
       run: npm install -g cordova cordova-res
 
-    - name: Create Project and Setup Icon
+    - name: Create Project and Copy Files
       run: |
-        # إنشاء المشروع بالاسم المطلوب
-        cordova create cordova-app com.moosa.arty "نصر الله ١"
+        # 1. إنشاء المشروع باسم إنجليزي لتجنب مشاكل الترميز
+        cordova create cordova-app com.moosa.arty ArtyApp
         cd cordova-app
         cordova platform add android
         
-        # نسخ ملفات الويب
+        # 2. نسخ ملفات الويب
         rm -rf www/*
         cp ../index.html www/
         cp ../app.js www/
         cp ../style.css www/
         
-        # تجهيز الأيقونة وشاشة البداية من صورتك
+        # 3. تغيير اسم التطبيق إلى "نصر الله ١" باستخدام Node.js (طريقة آمنة 100%)
+        node -e "const fs=require('fs'); let c=fs.readFileSync('config.xml','utf8'); c=c.replace(/<name>.*?<\/name>/, '<name>نصر الله ١</name>'); fs.writeFileSync('config.xml', c);"
+        
+        # 4. تجهيز الأيقونة (نسخ صورتك كأيقونة وشاشة بداية)
         mkdir -p resources
         cp ../icon.png resources/icon.png
         cp ../icon.png resources/splash.png
         
-        # توليد الأيقونات تلقائياً
+        # 5. توليد الأيقونات
         cordova-res android --skip-config --copy
+        
+        # 6. تحديث ملفات الأندرويد ليأخذ الاسم الجديد
+        cordova prepare android
 
     - name: Setup Keystore
       run: |
