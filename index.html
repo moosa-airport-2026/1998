@@ -292,20 +292,18 @@
 
 <!-- ميزة توجيه المدفع (نقطة التصويب) -->
 <div class="card">
-  <h3>📍 توجيه المدفع على نقطة تصويب</h3>
-  <p style="font-size:12px; color:var(--dim); margin-bottom:10px;">أدخل إحداثيات نقطة التصويب، وسيعطيك التطبيق قراءة الموجه المطلوبة ليكون مركز القوس متجهاً للاتجاه المطلوب.</p>
-  <div class="mgbox">
-  <label>إحداثيات نقطة التصويب - الشرقي</label><input id="apE" inputmode="numeric" maxlength="5" placeholder="12345">
-  <label>إحداثيات نقطة التصويب - الشمالي</label><input id="apN" inputmode="numeric" maxlength="5" placeholder="67890">
-  <div class="mgrow">
-  <div><label>Zone</label><input id="apZone" maxlength="3" placeholder="38S"></div>
-  <div><label>Square</label><input id="apSq" maxlength="2" placeholder="MB"></div>
-  </div>
+  <h3>📍 حساب الانحراف (الطريقة الميدانية)</h3>
+  <p style="font-size:12px; color:var(--dim); margin-bottom:10px;">أدخل الزوايا المطلوبة وسيعطيك التطبيق قراءة الموجه المطلوبة ليكون المدفع متجهاً للهدف.</p>
+  
+  <div class="row">
+    <div><label>اتجاه المدفع الحالي (مركز القوس)</label><input id="apGunAz" type="number" placeholder="مثلاً 3200"></div>
+    <div><label>اتجاه الهدف المطلوب</label><input id="apTargetAz" type="number" placeholder="مثلاً 3400"></div>
   </div>
   <div class="row">
-  <div><label>مركز القوس المطلوب</label><input id="apCenterAz" type="number" placeholder="يُجلب تلقائياً"></div>
-  <div><label>رقم الشاخص الأساسي</label><input id="apShakhes" type="number" placeholder="يُجلب تلقائياً"></div>
+    <div><label>رقم الشاخص (الأساسي)</label><input id="apShakhes" type="number" value="6000"></div>
+    <div></div>
   </div>
+
   <button class="btn blue" onclick="calcAimPoint()">🎯 احسب قراءة الموجه</button>
   <div id="aimPointOut" style="margin-top:10px; font-weight:bold; color:var(--amber); text-align:center; line-height:1.6;"></div>
 </div>
