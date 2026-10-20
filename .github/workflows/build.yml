@@ -27,7 +27,7 @@ jobs:
 
     - name: Create Cordova Project and Copy Files
       run: |
-        # 1. هنا تم تغيير اسم التطبيق إلى "نصر الله ١"
+        # 1. اسم التطبيق هنا
         cordova create cordova-app com.moosa.arty "نصر الله ١"
         cd cordova-app
         cordova platform add android
@@ -37,11 +37,12 @@ jobs:
         cp ../style.css www/
         cp ../icon.png www/
         
-        # 2. تجهيز الأيقونة الخاصة بك
+        # 2. تجهيز الأيقونة فقط (تجاهل شاشة البداية)
         mkdir -p resources
         cp ../icon.png resources/icon.png
         npm install -g cordova-res
-        cordova-res android --skip-config --copy
+        # أضفنا --type icon لتجاهل طلب صورة شاشة البداية
+        cordova-res android --skip-config --copy --type icon
 
     - name: Setup Keystore
       run: |
@@ -62,7 +63,6 @@ jobs:
     - name: Build APK
       run: |
         cd cordova-app
-        # هذا الأمر يجبر Cordova على إنتاج APK وليس AAB
         cordova build android --release --buildConfig build.json -- --packageType=apk
 
     - name: Upload APK
