@@ -24,29 +24,36 @@ jobs:
 
     - name: Install Cordova and ImageMagick
       run: |
-        npm install -g cordova cordova-res
+        npm install -g cordova
         sudo apt-get update && sudo apt-get install -y imagemagick
 
-    - name: Create Cordova Project and Copy Files
+    - name: Create Cordova Project and Apply Icon
       run: |
-        # هنا الاسم (نصر الله) بدون رقم 1
-        cordova create cordova-app com.moosa.arty "نصر الله"
+        # 1. إنشاء المشروع بالاسم المطلوب
+        cordova create cordova-app com.moosa.arty "نصر الله ١"
         cd cordova-app
         cordova platform add android
+        
+        # 2. نسخ ملفات التطبيق
         rm -rf www/*
         cp ../index.html www/
         cp ../app.js www/
         cp ../style.css www/
         
-        # تجهيز الأيقونة وشاشة البداية
-        mkdir -p resources
-        # تحويل الصورة إلى PNG حقيقية بمقاس 1024
-        convert ../icon.png -resize 1024x1024! resources/icon.png
-        # إنشاء شاشة بداية بيضاء وهمية لكي لا تفشل الأداة
-        convert -size 2732x2732 xc:white resources/splash.png
+        # 3. الحل الجذري للأيقونة: استبدال ملفات الأيقونة مباشرة داخل الأندرويد
+        RES_DIR="platforms/android/app/src/main/res"
         
-        # توليد الأيقونات
-        cordova-res android --skip-config --copy
+        # التأكد من وجود صورة icon.png في المشروع
+        if [ -f ../icon.png ]; then
+          convert ../icon.png -resize 48x48! $RES_DIR/mipmap-mdpi/ic_launcher.png
+          convert ../icon.png -resize 72x72! $RES_DIR/mipmap-hdpi/ic_launcher.png
+          convert ../icon.png -resize 96x96! $RES_DIR/mipmap-xhdpi/ic_launcher.png
+          convert ../icon.png -resize 144x144! $RES_DIR/mipmap-xxhdpi/ic_launcher.png
+          convert ../icon.png -resize 192x192! $RES_DIR/mipmap-xxxhdpi/ic_launcher.png
+          echo "✅ تم استبدال الأيقونات بنجاح."
+        else
+          echo "⚠️ لم يتم العثور على ملف icon.png، سيتم استخدام الأيقونة الافتراضية."
+        fi
 
     - name: Setup Keystore
       run: |
