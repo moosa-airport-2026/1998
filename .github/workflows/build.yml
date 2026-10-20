@@ -27,7 +27,8 @@ jobs:
 
     - name: Create Cordova Project and Copy Files
       run: |
-        cordova create cordova-app com.moosa.arty ArtyApp
+        # 1. هنا تم تغيير اسم التطبيق إلى "نصر الله ١"
+        cordova create cordova-app com.moosa.arty "نصر الله ١"
         cd cordova-app
         cordova platform add android
         rm -rf www/*
@@ -35,6 +36,12 @@ jobs:
         cp ../app.js www/
         cp ../style.css www/
         cp ../icon.png www/
+        
+        # 2. تجهيز الأيقونة الخاصة بك
+        mkdir -p resources
+        cp ../icon.png resources/icon.png
+        npm install -g cordova-res
+        cordova-res android --skip-config --copy
 
     - name: Setup Keystore
       run: |
@@ -55,13 +62,12 @@ jobs:
     - name: Build APK
       run: |
         cd cordova-app
-        # هذا الأمر الجديد يجبر Cordova على إنتاج ملف APK
+        # هذا الأمر يجبر Cordova على إنتاج APK وليس AAB
         cordova build android --release --buildConfig build.json -- --packageType=apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-release-signed
-        # المسار الدقيق لملف الـ APK بعد إجبار النظام على إنتاجه
         path: cordova-app/platforms/android/app/build/outputs/apk/release/*.apk
         if-no-files-found: error
