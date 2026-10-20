@@ -22,9 +22,9 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install Cordova and ImageMagick
+    - name: Install Cordova and Tools
       run: |
-        npm install -g cordova
+        npm install -g cordova cordova-res
         sudo apt-get update
         sudo apt-get install -y imagemagick
 
@@ -41,39 +41,25 @@ jobs:
         cp ../app.js www/
         cp ../style.css www/
         
-        # 3. تغيير الاسم إلى "نصر الله ١"
-        node -e "const fs=require('fs'); let c=fs.readFileSync('config.xml','utf8'); c=c.replace(/<name>.*?<\/name>/, '<name>نصر الله ١</name>'); fs.writeFileSync('config.xml', c);"
+        # 3. تجهيز الصورة في مجلد resources
+        mkdir -p resources
+        cp ../icon.png resources/icon.png
+        cp ../icon.png resources/splash.png
         
-        # 4. تجهيز الملفات
-        cordova prepare android
-
-    - name: Force Custom Icon Override
-      run: |
-        cd cordova-app
-        RES="platforms/android/app/src/main/res"
+        # 4. تعديل ملف config.xml برمجياً لإضافة الأيقونة والاسم
+        node -e "
+          const fs = require('fs');
+          let c = fs.readFileSync('config.xml', 'utf8');
+          c = c.replace(/<name>.*?<\/name>/, '<name>نصر الله ١</name>');
+          // إزالة أي أيقونات قديمة
+          c = c.replace(/<icon[^>]*>/g, '');
+          // إضافة الأيقونة الجديدة
+          c = c.replace('</widget>', '    <icon src=\"resources/icon.png\" />\n</widget>');
+          fs.writeFileSync('config.xml', c);
+        "
         
-        # الحل الجذري: مسح كل مجلدات الأيقونات القديمة (بما فيها التكيفية)
-        rm -rf $RES/mipmap-anydpi-v26
-        rm -rf $RES/mipmap-mdpi
-        rm -rf $RES/mipmap-hdpi
-        rm -rf $RES/mipmap-xhdpi
-        rm -rf $RES/mipmap-xxhdpi
-        rm -rf $RES/mipmap-xxxhdpi
-        
-        # إعادة إنشاء المجلدات ووضع صورتك فيها
-        mkdir -p $RES/mipmap-mdpi $RES/mipmap-hdpi $RES/mipmap-xhdpi $RES/mipmap-xxhdpi $RES/mipmap-xxxhdpi
-        
-        if [ -f ../icon.png ]; then
-          echo "Applying custom icon..."
-          convert ../icon.png -resize 48x48! $RES/mipmap-mdpi/ic_launcher.png
-          convert ../icon.png -resize 72x72! $RES/mipmap-hdpi/ic_launcher.png
-          convert ../icon.png -resize 96x96! $RES/mipmap-xhdpi/ic_launcher.png
-          convert ../icon.png -resize 144x144! $RES/mipmap-xxhdpi/ic_launcher.png
-          convert ../icon.png -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher.png
-          
-          # نسخ الصورة للأيقونة المستديرة أيضاً
-          convert ../icon.png -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher_round.png
-        fi
+        # 5. توليد الأيقونات (هذه المرة ستنجح لأن config.xml يشير للصورة)
+        cordova-res android --skip-config --copy
 
     - name: Setup Keystore
       run: |
