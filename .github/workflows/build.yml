@@ -23,7 +23,7 @@ jobs:
         node-version: '20'
 
     - name: Install Cordova
-      run: npm install -g cordova cordova-res
+      run: npm install -g cordova
 
     - name: Create Project and Copy Files
       run: |
@@ -34,31 +34,16 @@ jobs:
         cp ../index.html www/
         cp ../app.js www/
         cp ../style.css www/
-        mkdir -p resources
-        cp ../icon.png resources/icon.png
-        cp ../icon.png resources/splash.png
-        cordova-res android --skip-config --copy
+        cp ../icon.png www/
 
     - name: Setup Keystore
       run: |
         echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 --decode > my-release-key.jks
-        cat <<EOF > cordova-app/build.json
-        {
-          "android": {
-            "release": {
-              "keystore": "../my-release-key.jks",
-              "storePassword": "123456",
-              "alias": "my-key",
-              "password": "123456"
-            }
-          }
-        }
-        EOF
 
     - name: Build APK
       run: |
         cd cordova-app
-        cordova build android --release --buildConfig build.json -- --packageType=apk
+        cordova build android --release -- --keystore=../my-release-key.jks --storePassword=123456 --alias=my-key --password=123456 --packageType=apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
