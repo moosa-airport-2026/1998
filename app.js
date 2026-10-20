@@ -1,5 +1,5 @@
 // مسح البيانات القديمة عند التحديث لضمان عدم التعارض
-try { if(localStorage.getItem("ARTY_VER") !== "26") { localStorage.clear(); localStorage.setItem("ARTY_VER","26"); } } catch(e){}
+try { if(localStorage.getItem("ARTY_VER") !== "27") { localStorage.clear(); localStorage.setItem("ARTY_VER","27"); } } catch(e){}
 
 var MGRS=(function(){var C='AJSAJS',R='AFAFAF',S=6,I=73,O=79,V=86,Z=90,A=65;
 function LD(lat){var b=['C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];if(lat<-80||lat>84)return'Z';return b[Math.floor((lat+80)/8)];}
@@ -95,6 +95,7 @@ function readMGRS(p){var z=$(p+'Zone').value.trim().toUpperCase();var s=$(p+'Sq'
 function updateHint(p){var ll=readMGRS(p),h=$(p+'Hint');if(!h)return;if(ll)h.textContent='✓ '+ll.lat.toFixed(5)+', '+ll.lon.toFixed(5);else h.textContent='';}
 function fillMGRS(p,lat,lon){try{var m=MGRS.forward(lat,lon);$(p+'Zone').value=m.zone;$(p+'Sq').value=m.sq;$(p+'E').value=m.e;$(p+'N').value=m.n;updateHint(p);}catch(e){}}
 function batChanged(){updateHint('nb');}
+function onTargetChange(){updateHint('t');}
 
 function doLogin(){var v=$("pinIn").value.trim();if(v===DB.pin){$("login").style.display="none";showSplash();}else{$("pinErr").textContent="✗ رمز خاطئ";$("pinIn").value="";}}
 function showSplash(){var sp=$("splash");sp.style.display="flex";setTimeout(function(){sp.style.opacity="1";},50);setTimeout(function(){sp.style.opacity="0";setTimeout(function(){sp.style.display="none";$("app").style.display="block";boot();},800);},5000);}
@@ -132,7 +133,7 @@ function tab(id,el){
   var btns=document.querySelectorAll(".tabs button");for(var j=0;j<btns.length;j++)btns[j].classList.remove("on");el.classList.add("on");
   if(id==='map'){ setTimeout(function(){ if(map) { map.invalidateSize(); refreshMapMarkers(); } }, 400); }
   if(id==='bat'){ renderWeaponFormDropdowns(); cancelEditBat(); }
-  if(id==='setup'){ renderSetupLists(); }
+  if(id==='setup'){ renderSetupLists(); updateAimDefaults(); } // تحديث القيم الافتراضية عند دخول الضبط
 }
 
 function boot(){
@@ -416,12 +417,22 @@ function onWeaponChange(){
       s.innerHTML=h;
   }
   refreshMapMarkers();
+  updateAimDefaults();
 }
 
-// [تعديل 3]: دالة حساب نقطة التصويب
+// دالة لتحديث القيم الافتراضية لبطاقة التوجيه
+function updateAimDefaults() {
+    var w = getCurrentWeapon();
+    if (w && $("apCenterAz") && $("apShakhes")) {
+        $("apCenterAz").value = w.centerAz;
+        $("apShakhes").value = w.shakhes || 0;
+    }
+}
+
+// [الميزة الجديدة]: حساب قراءة الموجه لتوجيه المدفع
 function calcAimPoint() {
     var w = getCurrentWeapon();
-    if (!w) { alert("اختر سلاح أولاً"); return; }
+    if (!w) { alert("يجب اختيار بطارية وسلاح أولاً من تبويب (نار)"); return; }
     
     var z = $("apZone").value.trim().toUpperCase();
     var s = $("apSq").value.trim().toUpperCase();
@@ -433,25 +444,29 @@ function calcAimPoint() {
         return;
     }
     
+    var centerAz = parseFloat($("apCenterAz").value);
+    if (isNaN(centerAz)) centerAz = w.centerAz;
+    
+    var shakhes = parseFloat($("apShakhes").value);
+    if (isNaN(shakhes)) shakhes = w.shakhes || 0;
+    
     try {
         var apLatLon = MGRS.inverse(z + s + e + n);
-        var az = toMil(bearing(w.lat, w.lon, apLatLon.lat, apLatLon.lon));
+        
+        var azToAp = toMil(bearing(w.lat, w.lon, apLatLon.lat, apLatLon.lon));
         var distToAp = dist(w.lat, w.lon, apLatLon.lat, apLatLon.lon);
         
-        var out = '<div>اتجاه نقطة التصويب (من المدفع): <span class="big" style="color:var(--acc2)">' + az.toFixed(0) + ' mil</span></div>' +
-                  '<div style="font-size:12px;color:var(--dim);margin-top:5px">المسافة إلى نقطة التصويب: ' + Math.round(distToAp) + ' م</div>';
+        var diff = azToAp - centerAz;
+        if (diff < 0) diff += MILS;
         
-        // التحقق من وجود النقطة داخل قوس المدفع
-        var relAz = (az - w.centerAz + MILS) % MILS;
-        var isRight = relAz <= MILS/2;
-        var deviation = isRight ? relAz : MILS - relAz;
-        var limit = isRight ? w.limitR : w.limitL;
+        var sightReading = (shakhes + diff) % MILS;
         
-        if (deviation > limit) {
-            out += '<div style="color:var(--red);font-size:12px;margin-top:5px">⚠️ نقطة التصويب خارج قوس المدفع (مركز القوس: '+w.centerAz+')</div>';
-        } else {
-            out += '<div style="color:var(--green);font-size:12px;margin-top:5px">✓ نقطة التصويب داخل قوس المدفع</div>';
-        }
+        var out = '<div style="font-size:16px;">القراءة المطلوبة على الموجه: <br><span class="big" style="color:var(--acc2); font-size:24px;">' + sightReading.toFixed(0) + ' mil</span></div>' +
+                  '<div style="font-size:12px;color:var(--dim);margin-top:5px; border-top:1px dashed var(--brd); padding-top:5px;">' +
+                  'اتجاه نقطة التصويب (من المدفع): ' + azToAp.toFixed(0) + ' mil<br>' +
+                  'المسافة إلى نقطة التصويب: ' + Math.round(distToAp) + ' م<br>' +
+                  'مركز القوس المستخدم: ' + centerAz + ' mil | الشاخص: ' + shakhes +
+                  '</div>';
         
         $("aimPointOut").innerHTML = out;
     } catch (err) {
@@ -571,7 +586,7 @@ function calcFire(){
     var mvPct = parseFloat($("cMVPercent").value) || 0;
     var weightMark = parseFloat($("cWeightMark").value) || 0;
     
-    // [تعديل 1]: حساب فرق الارتفاع تلقائياً
+    // حساب فرق الارتفاع تلقائياً
     var tAlt = parseFloat($("tAlt").value) || 0; 
     var wAlt = w.alt || 0;
     var heightDiff = tAlt - wAlt;
