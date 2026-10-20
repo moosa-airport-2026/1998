@@ -57,9 +57,17 @@ jobs:
         cd cordova-app
         cordova build android --release --buildConfig build.json
 
-    - name: Upload APK Folder
+    - name: Find and Copy APK
+      run: |
+        echo "=== البحث عن ملف APK ==="
+        find . -name "*.apk" -type f
+        echo "=== نسخ الملف إلى الجذر ==="
+        find . -name "*.apk" -type f -exec cp {} ./app-release-final.apk \;
+        ls -la app-release-final.apk
+
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-files
-        # هنا نطلب منه رفع المجلد بالكامل بدلاً من ملف محدد
-        path: cordova-app/platforms/android/app/build/outputs/apk/release/
+        name: app-release
+        path: app-release-final.apk
+        if-no-files-found: error
