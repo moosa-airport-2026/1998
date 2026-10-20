@@ -55,19 +55,13 @@ jobs:
     - name: Build APK
       run: |
         cd cordova-app
-        cordova build android --release --buildConfig build.json
-
-    - name: Find and Copy APK
-      run: |
-        echo "=== البحث عن ملف APK ==="
-        find . -name "*.apk" -type f
-        echo "=== نسخ الملف إلى الجذر ==="
-        find . -name "*.apk" -type f -exec cp {} ./app-release-final.apk \;
-        ls -la app-release-final.apk
+        # هذا الأمر الجديد يجبر Cordova على إنتاج ملف APK
+        cordova build android --release --buildConfig build.json -- --packageType=apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
-        path: app-release-final.apk
+        name: app-release-signed
+        # المسار الدقيق لملف الـ APK بعد إجبار النظام على إنتاجه
+        path: cordova-app/platforms/android/app/build/outputs/apk/release/*.apk
         if-no-files-found: error
