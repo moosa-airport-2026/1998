@@ -22,38 +22,34 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install Cordova and ImageMagick
-      run: |
-        npm install -g cordova
-        sudo apt-get update && sudo apt-get install -y imagemagick
+    - name: Install Cordova and Tools
+      run: npm install -g cordova cordova-res
 
-    - name: Create Cordova Project and Apply Icon
+    - name: Create Project and Setup Icon
       run: |
-        # 1. إنشاء المشروع بالاسم المطلوب
-        cordova create cordova-app com.moosa.arty "نصر الله ١"
+        # 1. نستخدم اسم إنجليزي لتجنب مشاكل الترميز، وسنغيره لاحقاً
+        cordova create cordova-app com.moosa.arty "Nasrallah"
         cd cordova-app
         cordova platform add android
         
-        # 2. نسخ ملفات التطبيق
+        # 2. نسخ ملفات الويب
         rm -rf www/*
         cp ../index.html www/
         cp ../app.js www/
         cp ../style.css www/
         
-        # 3. الحل الجذري للأيقونة: استبدال ملفات الأيقونة مباشرة داخل الأندرويد
-        RES_DIR="platforms/android/app/src/main/res"
+        # 3. تجهيز الأيقونة الخاصة بك
+        mkdir -p resources
+        cp ../icon.png resources/icon.png
+        # نستخدم نفس الصورة كشاشة بداية لكي لا يفشل البناء
+        cp ../icon.png resources/splash.png
         
-        # التأكد من وجود صورة icon.png في المشروع
-        if [ -f ../icon.png ]; then
-          convert ../icon.png -resize 48x48! $RES_DIR/mipmap-mdpi/ic_launcher.png
-          convert ../icon.png -resize 72x72! $RES_DIR/mipmap-hdpi/ic_launcher.png
-          convert ../icon.png -resize 96x96! $RES_DIR/mipmap-xhdpi/ic_launcher.png
-          convert ../icon.png -resize 144x144! $RES_DIR/mipmap-xxhdpi/ic_launcher.png
-          convert ../icon.png -resize 192x192! $RES_DIR/mipmap-xxxhdpi/ic_launcher.png
-          echo "✅ تم استبدال الأيقونات بنجاح."
-        else
-          echo "⚠️ لم يتم العثور على ملف icon.png، سيتم استخدام الأيقونة الافتراضية."
-        fi
+        # 4. توليد الأيقونات
+        cordova-res android --skip-config --copy
+        
+        # 5. تغيير اسم التطبيق المكتوب على الهاتف إلى "نصر الله ١"
+        sed -i 's/<name>Nasrallah<\/name>/<name>نصر الله ١<\/name>/g' config.xml
+        sed -i 's/<name>Nasrallah<\/name>/<name>نصر الله ١<\/name>/g' platforms/android/app/src/main/res/values/strings.xml
 
     - name: Setup Keystore
       run: |
