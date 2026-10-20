@@ -41,24 +41,23 @@ jobs:
         cp ../app.js www/
         cp ../style.css www/
         
-        # 3. تجهيز الصورة في مجلد resources
+        # 3. تجهيز الصورة وتكبيرها لتناسب شاشة البداية
         mkdir -p resources
         cp ../icon.png resources/icon.png
-        cp ../icon.png resources/splash.png
+        # هنا نقوم بتكبير الصورة إلى 1920x1920 لتلبية متطلبات شاشة البداية
+        convert ../icon.png -resize 1920x1920! resources/splash.png
         
         # 4. تعديل ملف config.xml برمجياً لإضافة الأيقونة والاسم
         node -e "
           const fs = require('fs');
           let c = fs.readFileSync('config.xml', 'utf8');
           c = c.replace(/<name>.*?<\/name>/, '<name>نصر الله ١</name>');
-          // إزالة أي أيقونات قديمة
           c = c.replace(/<icon[^>]*>/g, '');
-          // إضافة الأيقونة الجديدة
           c = c.replace('</widget>', '    <icon src=\"resources/icon.png\" />\n</widget>');
           fs.writeFileSync('config.xml', c);
         "
         
-        # 5. توليد الأيقونات (هذه المرة ستنجح لأن config.xml يشير للصورة)
+        # 5. توليد الأيقونات (هذه المرة ستنجح لأن الصورة بالحجم المطلوب)
         cordova-res android --skip-config --copy
 
     - name: Setup Keystore
